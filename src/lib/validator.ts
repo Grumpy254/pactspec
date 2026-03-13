@@ -2,6 +2,7 @@ import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import { fetch as undiciFetch, Agent } from 'undici';
 import type {
   AgentRow,
   AgentSpecSkill,
@@ -130,15 +131,19 @@ export async function assertSafeUrl(rawUrl: string, label: string): Promise<void
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Resolve hostname to IP once, then fetch by IP to eliminate DNS rebinding window.
-// The original Host header is preserved so the server can use virtual hosting.
-async function resolveToIp(hostname: string, port: string, protocol: string): Promise<string> {
-  if (isIP(hostname)) return hostname;
+// Resolve hostname to a safe IP once, then pin the TCP connection to that IP
+// via undici's custom lookup — keeping the original hostname in the URL so
+// TLS SNI and certificate validation work correctly. This eliminates the
+// DNS rebinding window without breaking HTTPS.
+async function resolveSafeIp(hostname: string): Promise<string> {
+  if (isIP(hostname)) {
+    if (isPrivateIp(hostname)) throw new Error(`Direct IP ${hostname} is not allowed`);
+    return hostname;
+  }
   const addresses = await resolveHost(hostname);
   const safe = addresses.find((a) => !isPrivateIp(a));
   if (!safe) throw new Error(`${hostname} resolves only to private addresses`);
-  // Format IPv6 addresses with brackets
-  return isIP(safe) === 6 ? `[${safe}]` : safe;
+  return safe;
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
@@ -146,11 +151,27 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const parsed = new URL(url);
-    const ip = await resolveToIp(parsed.hostname, parsed.port, parsed.protocol);
-    const fetchUrl = `${parsed.protocol}//${ip}${parsed.port ? `:${parsed.port}` : ''}${parsed.pathname}${parsed.search}`;
-    const headers = new Headers(options.headers as HeadersInit | undefined);
-    if (!headers.has('Host')) headers.set('Host', parsed.hostname);
-    return await fetch(fetchUrl, { ...options, headers, signal: controller.signal });
+    const pinnedIp = await resolveSafeIp(parsed.hostname);
+    const family = isIP(pinnedIp) === 6 ? 6 : 4;
+
+    // undici dispatcher: override DNS so the TCP connection goes to the
+    // pre-resolved IP, but the URL (and therefore TLS SNI) stays as the
+    // original hostname. Certificate validation works; DNS rebinding is blocked.
+    const dispatcher = new Agent({
+      connect: {
+        lookup: (_hostname, _opts, cb) => {
+          cb(null, [{ address: pinnedIp, family }]);
+        },
+      },
+    });
+
+    return await undiciFetch(url, {
+      method: (options as RequestInit).method,
+      headers: (options as RequestInit).headers as Record<string, string> | undefined,
+      body: (options as RequestInit).body as string | undefined,
+      signal: controller.signal,
+      dispatcher,
+    }) as unknown as Response;
   } finally {
     clearTimeout(timer);
   }

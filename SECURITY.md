@@ -1,5 +1,7 @@
 # AgentSpec Security Policy
 
+This is the initial security policy for AgentSpec. It will evolve as the spec and registry mature.
+
 ## Reporting vulnerabilities
 
 Please do **not** open public GitHub issues for security vulnerabilities.

@@ -1,4 +1,4 @@
-# AgentSpec ↔ OpenAPI Interoperability Guide
+# AgentSpec <-> OpenAPI Interoperability Guide
 
 OpenAPI describes HTTP APIs. AgentSpec describes AI agent capabilities including
 pricing, SLAs, and executable verification. They are complementary: an agent
@@ -32,15 +32,15 @@ These are AgentSpec-only and must be added manually:
 
 | AgentSpec field | Notes |
 |----------------|-------|
-| `skills[].pricing` | No OpenAPI equivalent — add via `x-pricing` extension first |
-| `skills[].sla` | No OpenAPI equivalent — add via `x-sla` extension first |
+| `skills[].pricing` | No OpenAPI equivalent - add via `x-pricing` extension first |
+| `skills[].sla` | No OpenAPI equivalent - add via `x-sla` extension first |
 | `skills[].testSuite` | No OpenAPI equivalent |
-| `provider.did` | Decentralized identity — no OpenAPI equivalent |
+| `provider.did` | Decentralized identity - no OpenAPI equivalent |
 | `attestations` | Registry-managed |
 
 ---
 
-## Converting OpenAPI → AgentSpec
+## Converting OpenAPI -> AgentSpec
 
 ### Automated (planned CLI command)
 ```bash
@@ -52,7 +52,7 @@ agentspec init --from-openapi openapi.yaml --out agentspec.json
 1. **One skill per `operationId`** (or per `tag` if you prefer coarser granularity)
 2. **`inputSchema`** = the `requestBody` JSON Schema, or a merged object of all query/body parameters
 3. **`outputSchema`** = the `200` response JSON Schema
-4. **`id`** = `operationId` lowercased and hyphenated (e.g., `createInvoice` → `create-invoice`)
+4. **`id`** = `operationId` lowercased and hyphenated (e.g., `createInvoice` -> `create-invoice`)
 5. **`endpoint.url`** = first entry in `servers[]`
 6. **`provider.name`** = `info.contact.name` or `info.title`
 

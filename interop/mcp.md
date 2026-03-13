@@ -1,4 +1,4 @@
-# AgentSpec ↔ MCP Interoperability Guide
+# AgentSpec <-> MCP Interoperability Guide
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is a transport
 and tool-invocation standard between AI models and tool servers. AgentSpec is a
@@ -16,7 +16,7 @@ They are **complementary, not competing**:
 | Machine-readable registry | No | Yes |
 
 An MCP server can publish an AgentSpec to make itself discoverable, priceable,
-and verifiable — without changing any of its MCP implementation.
+and verifiable - without changing any of its MCP implementation.
 
 ---
 
@@ -28,7 +28,7 @@ and verifiable — without changing any of its MCP implementation.
 | `ServerInfo.version` | `version` | Direct |
 | `Tool.name` | `skills[].id` | Hyphenate for AgentSpec id |
 | `Tool.description` | `skills[].description` | Direct |
-| `Tool.inputSchema` | `skills[].inputSchema` | JSON Schema — direct passthrough |
+| `Tool.inputSchema` | `skills[].inputSchema` | JSON Schema - direct passthrough |
 | *(none)* | `skills[].outputSchema` | MCP doesn't define output schema |
 | Server transport URL | `endpoint.url` | The HTTP/SSE endpoint |
 | *(none)* | `skills[].pricing` | AgentSpec-only |
@@ -104,7 +104,7 @@ MCP server with two tools (`read_file`, `write_file`):
 
 ---
 
-## Converting MCP tool list → AgentSpec
+## Converting MCP tool list -> AgentSpec
 
 ### Using the CLI (planned)
 ```bash
@@ -116,10 +116,10 @@ You then fill in `pricing`, `sla`, and `testSuite` manually.
 
 ### Manual rules
 
-1. Each MCP `Tool` → one AgentSpec `skill`
-2. `Tool.name` → `skill.id` (lowercase, hyphenated)
-3. `Tool.inputSchema` → `skill.inputSchema` (direct passthrough — MCP already uses JSON Schema)
-4. Add `outputSchema` manually — MCP doesn't define this
+1. Each MCP `Tool` -> one AgentSpec `skill`
+2. `Tool.name` -> `skill.id` (lowercase, hyphenated)
+3. `Tool.inputSchema` -> `skill.inputSchema` (direct passthrough - MCP already uses JSON Schema)
+4. Add `outputSchema` manually - MCP doesn't define this
 5. Set `endpoint.url` to the MCP server's HTTP base URL
 
 ---
@@ -128,15 +128,15 @@ You then fill in `pricing`, `sla`, and `testSuite` manually.
 
 ```
 AI agent wants to find a file-reading capability
-        ↓
+        v
 Queries AgentSpec registry: GET /api/agents?q=filesystem
-        ↓
+        v
 Finds AgentSpec for Filesystem MCP Server
-        ↓
+        v
 Reads endpoint.url + auth config
-        ↓
+        v
 Connects via standard MCP transport
-        ↓
+        v
 Invokes tools normally
 ```
 
@@ -147,7 +147,7 @@ AgentSpec handles **discovery and trust**; MCP handles **invocation**.
 ## Key difference: outputSchema
 
 MCP does not define the shape of tool responses. AgentSpec requires `outputSchema`
-for every skill. This is intentional — it enables:
+for every skill. This is intentional - it enables:
 
 1. Automated test suite generation
 2. Response validation in the validator

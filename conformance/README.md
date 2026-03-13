@@ -8,17 +8,17 @@ documents in `invalid/` with a meaningful error.
 
 ```
 conformance/
-├── valid/          # Documents that MUST be accepted
-└── invalid/        # Documents that MUST be rejected (with expected error hint)
+  valid/            # Documents that MUST be accepted
+  invalid/          # Documents that MUST be rejected (with expected error hint)
 ```
 
 ## Running against your validator
 
 ```bash
-# Using the AgentSpec CLI
+# Using the AgentSpec CLI (planned)
 agentspec conformance --validator https://your-validator/api/validate
 
-# Using the hosted registry validator
+# Using the hosted registry validator (planned)
 agentspec conformance --validator https://agentspec.dev/api/spec/validate
 ```
 
