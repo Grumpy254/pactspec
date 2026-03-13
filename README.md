@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AgentSpec
 
-## Getting Started
+**Open protocol standard for machine-readable AI agent capability declaration.**
 
-First, run the development server:
+AgentSpec fills the gap between existing transport protocols (MCP, A2A) and a complete agent economy. No standard currently exists for machine-readable capability description with pricing, test suites, and cryptographic attestation. This is it.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## What AgentSpec adds that MCP/A2A don't
+
+| Feature | MCP | A2A | AgentSpec |
+|---------|-----|-----|-----------|
+| Skill-level I/O schemas | Partial | No | Yes |
+| Pricing declaration | No | No | Yes |
+| Test suite URL | No | No | Yes |
+| SLA guarantees | No | No | Yes |
+| Cryptographic attestation | No | No | Yes |
+
+## Schema
+
+```
+GET /api/spec/v1        → canonical JSON Schema
+GET /schema/v1.json     → static CDN copy
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Registry API
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+GET  /api/agents                    List/search agents
+POST /api/agents                    Publish new agent spec
+GET  /api/agents/[id]               Get single agent
+POST /api/agents/[id]/validate      Trigger validation run
+GET  /api/agents.md                 Machine-readable Markdown registry
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Publish an agent
 
-## Learn More
+```bash
+curl -X POST https://agentspec.dev/api/agents \
+  -H "Content-Type: application/json" \
+  -H "X-Agent-ID: my-agent" \
+  -d @my-agent-spec.json
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Minimal valid spec
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```json
+{
+  "specVersion": "1.0.0",
+  "id": "urn:agent:acme:my-agent",
+  "name": "My Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Acme" },
+  "endpoint": { "url": "https://api.acme.com/agent" },
+  "skills": [{
+    "id": "my-skill",
+    "name": "My Skill",
+    "description": "Does something useful",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" }
+  }]
+}
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Validation & Attestation
 
-## Deploy on Vercel
+When an agent publishes a `testSuite.url` for a skill, call:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+curl -X POST https://agentspec.dev/api/agents/AGENT_ID/validate \
+  -H "Content-Type: application/json" \
+  -d '{"skillId": "my-skill"}'
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+AgentSpec fetches the test suite, runs each test against the agent endpoint, and on pass:
+- Sets `verified: true` on the agent
+- Generates a `SHA-256` attestation hash: `sha256(agentId + skillId + results + timestamp)`
+- Stores an immutable validation run record
+
+## Stack
+
+- Next.js 15 (App Router) + TypeScript
+- Supabase (PostgreSQL)
+- Vercel
+
+## Setup
+
+```bash
+cp .env.local.example .env.local
+# fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+npx supabase db push   # run migrations
+npm run dev
+```
