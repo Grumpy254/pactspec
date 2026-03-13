@@ -5,6 +5,8 @@ import { readFileSync, writeFileSync, readdirSync } from 'fs';
 import { resolve, join } from 'path';
 import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
+// Bundled schema — always available regardless of install location
+import bundledSchema from '../../src/lib/schema/agent-spec.v1.json';
 
 const program = new Command();
 
@@ -29,16 +31,7 @@ program
       process.exit(1);
     }
 
-    let schema: unknown;
-    try {
-      // Try local schema first, then fetch from registry
-      const localSchema = join(__dirname, '../../src/lib/schema/agent-spec.v1.json');
-      schema = JSON.parse(readFileSync(localSchema, 'utf-8'));
-    } catch {
-      console.log(pc.dim('Fetching schema from registry...'));
-      const res = await fetch('https://agentspec.dev/api/spec/v1');
-      schema = await res.json();
-    }
+    const schema: unknown = bundledSchema;
 
     const validate = ajv.compile(schema as object);
     const valid = validate(spec);
@@ -125,6 +118,11 @@ program
       process.exit(1);
     }
 
+    if (!res.ok) {
+      console.error(pc.red(`✗ Registry returned HTTP ${res.status}`));
+      process.exit(1);
+    }
+
     const data = await res.json() as {
       status: string;
       attestationHash?: string;
@@ -157,16 +155,7 @@ program
     const ajv = new Ajv({ strict: false });
     addFormats(ajv);
 
-    let schema: unknown;
-    try {
-      const res = await fetch(`${opts.registry}/api/spec/v1`);
-      schema = await res.json();
-    } catch {
-      console.error(pc.red('✗ Could not fetch schema'));
-      process.exit(1);
-    }
-
-    const validate = ajv.compile(schema as object);
+    const validate = ajv.compile(bundledSchema as object);
     const conformanceDir = join(__dirname, '../../conformance');
 
     let passed = 0;
@@ -252,5 +241,246 @@ program
     console.log(pc.green(`✓ Created ${opts.out}`));
     console.log(pc.dim('Edit the file, then run: agentspec validate ' + opts.out));
   });
+
+// ── convert ───────────────────────────────────────────────────────────────────
+program
+  .command('convert <format> <file>')
+  .description('Convert an OpenAPI or MCP document to AgentSpec (formats: openapi, mcp)')
+  .option('-o, --out <file>', 'Output file (default: agentspec.json)')
+  .action((format: string, file: string, opts: { out?: string }) => {
+    if (format !== 'openapi' && format !== 'mcp') {
+      console.error(pc.red(`✗ Unknown format: ${format}. Supported: openapi, mcp`));
+      process.exit(1);
+    }
+
+    let source: Record<string, unknown>;
+    try {
+      source = JSON.parse(readFileSync(resolve(file), 'utf-8'));
+    } catch {
+      console.error(pc.red(`✗ Could not read or parse ${file}`));
+      process.exit(1);
+    }
+
+    if (format === 'openapi') {
+      const result = convertOpenApi(source);
+      const outFile = opts.out ?? 'agentspec.json';
+      writeFileSync(resolve(outFile), JSON.stringify(result.spec, null, 2));
+      console.log(pc.green(`✓ Converted to ${outFile}`));
+      if (result.warnings.length > 0) {
+        console.log(pc.yellow('\nWarnings (review before publishing):'));
+        for (const w of result.warnings) console.log(pc.yellow(`  ! ${w}`));
+      }
+      console.log(pc.dim(`\nNext: agentspec validate ${outFile}`));
+    } else {
+      const result = convertMcp(source);
+      const outFile = opts.out ?? 'agentspec.json';
+      writeFileSync(resolve(outFile), JSON.stringify(result.spec, null, 2));
+      console.log(pc.green(`✓ Converted to ${outFile}`));
+      if (result.warnings.length > 0) {
+        console.log(pc.yellow('\nWarnings (review before publishing):'));
+        for (const w of result.warnings) console.log(pc.yellow(`  ! ${w}`));
+      }
+      console.log(pc.dim(`\nNext: agentspec validate ${outFile}`));
+    }
+  });
+
+// ─── OpenAPI 3.x → AgentSpec converter ───────────────────────────────────────
+
+interface ConvertResult {
+  spec: Record<string, unknown>;
+  warnings: string[];
+}
+
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+}
+
+function toSemver(v: string): string {
+  const parts = v.replace(/^v/, '').split('.');
+  while (parts.length < 3) parts.push('0');
+  const clean = parts.slice(0, 3).map((p) => p.replace(/[^0-9]/g, '') || '0');
+  return clean.join('.');
+}
+
+function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
+  const warnings: string[] = [];
+
+  const info = (doc.info ?? {}) as Record<string, unknown>;
+  const rawTitle = (info.title as string | undefined) ?? 'My Agent';
+  const rawVersion = (info.version as string | undefined) ?? '1.0.0';
+  const description = (info.description as string | undefined) ?? '';
+
+  const servers = (doc.servers as Array<Record<string, unknown>> | undefined) ?? [];
+  const endpointUrl = (servers[0]?.url as string | undefined) ?? 'https://api.example.com';
+  if (!servers[0]?.url) warnings.push('No servers[0].url found — set endpoint.url manually');
+
+  const titleSlug = slugify(rawTitle);
+  const providerSlug = titleSlug.split('-')[0] ?? 'provider';
+  const agentSlug = titleSlug || 'agent';
+  const specId = `urn:agent:${providerSlug}:${agentSlug}`;
+
+  const paths = (doc.paths ?? {}) as Record<string, Record<string, unknown>>;
+  const skills: Record<string, unknown>[] = [];
+
+  for (const [path, pathItem] of Object.entries(paths)) {
+    for (const [method, operation] of Object.entries(pathItem as Record<string, unknown>)) {
+      if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue;
+      const op = operation as Record<string, unknown>;
+
+      const operationId = op.operationId as string | undefined;
+      const rawSkillId = operationId ? slugify(operationId) : slugify(`${method}-${path}`);
+      const skillId = rawSkillId.replace(/^[^a-z]/, 's') || 'skill';
+
+      const skillName = (op.summary as string | undefined) ?? operationId ?? `${method.toUpperCase()} ${path}`;
+      const skillDescription = (op.description as string | undefined) ?? skillName;
+
+      // Input schema from requestBody
+      let inputSchema: Record<string, unknown> = { type: 'object' };
+      const requestBody = op.requestBody as Record<string, unknown> | undefined;
+      if (requestBody) {
+        const content = requestBody.content as Record<string, unknown> | undefined;
+        const jsonContent = (content?.['application/json'] ?? content?.['application/json; charset=utf-8']) as Record<string, unknown> | undefined;
+        if (jsonContent?.schema) {
+          inputSchema = jsonContent.schema as Record<string, unknown>;
+        } else {
+          warnings.push(`${method.toUpperCase()} ${path}: No application/json requestBody — using empty inputSchema`);
+        }
+      } else if (method === 'get') {
+        // GET: parameters as input schema
+        const params = (op.parameters as Array<Record<string, unknown>> | undefined) ?? [];
+        if (params.length > 0) {
+          inputSchema = {
+            type: 'object',
+            properties: Object.fromEntries(
+              params.map((p) => [p.name, (p.schema as Record<string, unknown>) ?? { type: 'string' }])
+            ),
+          };
+        }
+      }
+
+      // Output schema from 200 response
+      let outputSchema: Record<string, unknown> = { type: 'object' };
+      const responses = (op.responses ?? {}) as Record<string, unknown>;
+      const ok = (responses['200'] ?? responses['201']) as Record<string, unknown> | undefined;
+      if (ok) {
+        const content = ok.content as Record<string, unknown> | undefined;
+        const jsonContent = content?.['application/json'] as Record<string, unknown> | undefined;
+        if (jsonContent?.schema) {
+          outputSchema = jsonContent.schema as Record<string, unknown>;
+        } else {
+          warnings.push(`${method.toUpperCase()} ${path}: No 200 application/json response schema — using empty outputSchema`);
+        }
+      } else {
+        warnings.push(`${method.toUpperCase()} ${path}: No 200/201 response defined — using empty outputSchema`);
+      }
+
+      skills.push({
+        id: skillId,
+        name: skillName,
+        description: skillDescription,
+        inputSchema,
+        outputSchema,
+        pricing: { model: 'free', amount: 0, currency: 'USD' },
+      });
+    }
+  }
+
+  if (skills.length === 0) {
+    warnings.push('No paths found in OpenAPI doc — add at least one skill manually');
+    skills.push({
+      id: 'default',
+      name: 'Default',
+      description: 'Add a description for this skill',
+      inputSchema: { type: 'object' },
+      outputSchema: { type: 'object' },
+      pricing: { model: 'free', amount: 0, currency: 'USD' },
+    });
+  }
+
+  const spec = {
+    specVersion: '1.0.0',
+    id: specId,
+    name: rawTitle,
+    version: toSemver(rawVersion),
+    description: description || undefined,
+    provider: {
+      name: rawTitle,
+      url: endpointUrl.startsWith('http') ? new URL(endpointUrl).origin : undefined,
+    },
+    endpoint: { url: endpointUrl },
+    skills,
+    tags: [],
+  };
+
+  return { spec, warnings };
+}
+
+// ─── MCP tool manifest → AgentSpec converter ─────────────────────────────────
+
+function convertMcp(doc: Record<string, unknown>): ConvertResult {
+  const warnings: string[] = [];
+
+  // MCP server manifests vary — handle both the tools list format and server info format
+  const serverName = (doc.name as string | undefined) ?? (doc.serverName as string | undefined) ?? 'MCP Agent';
+  const serverVersion = toSemver((doc.version as string | undefined) ?? '1.0.0');
+  const serverUrl = (doc.url as string | undefined) ?? (doc.endpoint as string | undefined) ?? 'https://api.example.com';
+
+  if (!doc.url && !doc.endpoint) {
+    warnings.push('No url/endpoint in MCP manifest — set endpoint.url manually');
+  }
+
+  const tools = (doc.tools as Array<Record<string, unknown>> | undefined) ?? [];
+  if (tools.length === 0) warnings.push('No tools found in MCP manifest — add skills manually');
+
+  const titleSlug = slugify(serverName);
+  const providerSlug = titleSlug.split('-')[0] ?? 'provider';
+  const agentSlug = titleSlug || 'agent';
+
+  const skills: Record<string, unknown>[] = tools.map((tool) => {
+    const toolName = (tool.name as string | undefined) ?? 'tool';
+    const inputSchema = (tool.inputSchema as Record<string, unknown> | undefined) ??
+      (tool.parameters as Record<string, unknown> | undefined) ??
+      { type: 'object' };
+
+    return {
+      id: slugify(toolName) || 'tool',
+      name: toolName,
+      description: (tool.description as string | undefined) ?? toolName,
+      inputSchema,
+      outputSchema: { type: 'object', description: 'MCP tool output — define outputSchema manually' },
+      pricing: { model: 'free', amount: 0, currency: 'USD' },
+    };
+  });
+
+  if (skills.length === 0) {
+    skills.push({
+      id: 'default',
+      name: 'Default',
+      description: 'Add a description for this skill',
+      inputSchema: { type: 'object' },
+      outputSchema: { type: 'object' },
+      pricing: { model: 'free', amount: 0, currency: 'USD' },
+    });
+  }
+
+  const spec = {
+    specVersion: '1.0.0',
+    id: `urn:agent:${providerSlug}:${agentSlug}`,
+    name: serverName,
+    version: serverVersion,
+    provider: { name: serverName, url: serverUrl.startsWith('http') ? new URL(serverUrl).origin : undefined },
+    endpoint: { url: serverUrl },
+    skills,
+    tags: [],
+  };
+
+  warnings.push('MCP outputSchema is not defined in the protocol — review each skill\'s outputSchema before publishing');
+
+  return { spec, warnings };
+}
 
 program.parse();

@@ -2,13 +2,30 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { AgentRow } from '@/types/agent-spec';
 
+// Strip newlines and escape characters that could break markdown structure
+// or be interpreted as markdown syntax by downstream renderers.
+function escapeMd(s: string): string {
+  return s
+    .replace(/[\r\n\t]/g, ' ')         // collapse whitespace
+    .replace(/[`[\]\\]/g, (c) => `\\${c}`) // escape backtick, brackets, backslash
+    .replace(/\s+/g, ' ')              // collapse multiple spaces
+    .trim();
+}
+
 export async function GET() {
   const supabase = await createClient();
-  const { data: agents, count } = await supabase
+  const { data: agents, count, error } = await supabase
     .from('agents')
     .select('*, skills(*)', { count: 'exact' })
     .order('published_at', { ascending: false })
     .limit(200);
+
+  if (error) {
+    return new NextResponse(`# Registry unavailable\n\nFailed to load agents: ${error.message}`, {
+      status: 500,
+      headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+    });
+  }
 
   const now = new Date().toISOString();
   const lines: string[] = [
@@ -20,18 +37,18 @@ export async function GET() {
   ];
 
   for (const agent of (agents ?? []) as AgentRow[]) {
-    const skillIds = agent.spec.skills.map((s) => s.id).join(', ');
-    const tags = agent.tags.join(', ');
+    const skillIds = agent.spec.skills.map((s) => escapeMd(s.id)).join(', ');
+    const tags = agent.tags.map(escapeMd).join(', ');
 
     // Summarise pricing from first skill that has it
     const pricingSkill = agent.spec.skills.find((s) => s.pricing);
     const pricingStr = pricingSkill?.pricing
-      ? `${pricingSkill.pricing.amount} ${pricingSkill.pricing.currency}/${pricingSkill.pricing.model} via ${pricingSkill.pricing.protocol ?? 'none'}`
+      ? `${pricingSkill.pricing.amount} ${escapeMd(pricingSkill.pricing.currency)}/${escapeMd(pricingSkill.pricing.model)} via ${escapeMd(pricingSkill.pricing.protocol ?? 'none')}`
       : 'free';
 
-    lines.push(`## ${agent.name} v${agent.version}`);
-    lines.push(`id: ${agent.spec_id}`);
-    lines.push(`endpoint: ${agent.endpoint_url}`);
+    lines.push(`## ${escapeMd(agent.name)} v${escapeMd(agent.version)}`);
+    lines.push(`id: ${escapeMd(agent.spec_id)}`);
+    lines.push(`endpoint: ${escapeMd(agent.endpoint_url)}`);
     lines.push(
       `verified: ${agent.verified ? `YES (${agent.verified_at})` : 'NO'}`
     );

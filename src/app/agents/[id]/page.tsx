@@ -10,14 +10,19 @@ function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string
   async function triggerValidation() {
     setValidating(true);
     setResult(null);
-    const res = await fetch(`/api/agents/${agentId}/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ skillId: skill.id }),
-    });
-    const data = await res.json();
-    setResult(data);
-    setValidating(false);
+    try {
+      const res = await fetch(`/api/agents/${agentId}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skillId: skill.id }),
+      });
+      const data = await res.json();
+      setResult(data);
+    } catch {
+      setResult({ status: 'ERROR', error: 'Network error — could not reach registry' });
+    } finally {
+      setValidating(false);
+    }
   }
 
   return (

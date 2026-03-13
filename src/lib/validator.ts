@@ -69,8 +69,20 @@ function isPrivateIpv6(addr: string): boolean {
   }
   if (normalized.startsWith('ff')) return true; // multicast
   if (normalized.startsWith('::ffff:')) {
-    const ipv4 = normalized.slice('::ffff:'.length);
-    return isPrivateIpv4(ipv4);
+    const rest = normalized.slice('::ffff:'.length);
+    // Dotted-decimal form: ::ffff:127.0.0.1
+    if (rest.includes('.')) return isPrivateIpv4(rest);
+    // Hex colon form: ::ffff:7f00:1 — convert to dotted-decimal
+    const hexParts = rest.split(':');
+    if (hexParts.length === 2) {
+      const hi = parseInt(hexParts[0], 16);
+      const lo = parseInt(hexParts[1], 16);
+      if (!Number.isNaN(hi) && !Number.isNaN(lo)) {
+        const dotted = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+        return isPrivateIpv4(dotted);
+      }
+    }
+    return true; // Unrecognised ::ffff: form — block to be safe
   }
   return false;
 }
@@ -107,8 +119,15 @@ export async function assertSafeUrl(rawUrl: string, label: string): Promise<void
     throw new Error(`${label} must be a valid URL`);
   }
 
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
-    throw new Error(`${label} must use http or https`);
+  // In production, only https: is accepted.
+  // Set VALIDATION_ALLOW_HTTP=true to permit http: in local/dev environments.
+  const allowHttp = process.env.VALIDATION_ALLOW_HTTP === 'true';
+  if (parsed.protocol === 'https:') {
+    // always allowed
+  } else if (parsed.protocol === 'http:' && allowHttp) {
+    // dev opt-in
+  } else {
+    throw new Error(`${label} must use https`);
   }
 
   const hostname = parsed.hostname.toLowerCase().replace(/\.$/, '');
@@ -207,18 +226,36 @@ export async function runValidation(
     };
   }
 
-  // Fetch test suite
+  // Fetch test suite — hard cap: 1 MB body, 50 tests
+  const MAX_SUITE_BYTES = 1_048_576;
+  const MAX_TESTS = 50;
   let suite: TestSuiteFile;
   try {
     const res = await fetchWithTimeout(skill.testSuite.url, {}, 10_000);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    suite = await res.json();
+    const text = await res.text();
+    if (text.length > MAX_SUITE_BYTES) {
+      throw new Error(`Test suite exceeds ${MAX_SUITE_BYTES / 1024}KB limit`);
+    }
+    suite = JSON.parse(text) as TestSuiteFile;
   } catch (err) {
     return {
       status: 'ERROR',
       results: [],
       durationMs: Date.now() - startTotal,
       error: `Failed to fetch testSuite: ${(err as Error).message}`,
+    };
+  }
+
+  if (!Array.isArray(suite.tests) || suite.tests.length === 0) {
+    return { status: 'ERROR', results: [], durationMs: Date.now() - startTotal, error: 'Test suite has no tests' };
+  }
+  if (suite.tests.length > MAX_TESTS) {
+    return {
+      status: 'ERROR',
+      results: [],
+      durationMs: Date.now() - startTotal,
+      error: `Test suite exceeds ${MAX_TESTS} test limit (got ${suite.tests.length})`,
     };
   }
 

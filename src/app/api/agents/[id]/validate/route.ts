@@ -23,13 +23,27 @@ export async function POST(
   const supabase = await createClient();      // reads
   const adminDb = createServiceRoleClient(); // writes
 
-  const isUuid = /^[0-9a-f-]{36}$/.test(id);
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
   const { data: agent, error } = isUuid
     ? await supabase.from('agents').select('*').eq('id', id).single()
     : await supabase.from('agents').select('*').eq('spec_id', decodeURIComponent(id)).single();
 
   if (error || !agent) {
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+  }
+
+  // Rate limit: one validation run per agent per 60 seconds
+  const cooldownSince = new Date(Date.now() - 60_000).toISOString();
+  const { count: recentRuns } = await adminDb
+    .from('validation_runs')
+    .select('id', { count: 'exact', head: true })
+    .eq('agent_id', agent.id)
+    .gte('created_at', cooldownSince);
+  if ((recentRuns ?? 0) > 0) {
+    return NextResponse.json(
+      { error: 'Rate limit: one validation run per agent per minute' },
+      { status: 429 }
+    );
   }
 
   // Insert run record — capture insert error so we can still return a result

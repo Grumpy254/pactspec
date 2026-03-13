@@ -9,7 +9,7 @@ export async function GET(
   const supabase = await createClient();
 
   // Try by UUID first, then by spec_id
-  const isUuid = /^[0-9a-f-]{36}$/.test(id);
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
   const { data, error } = isUuid
     ? await supabase.from('agents').select('*, skills(*)').eq('id', id).single()
     : await supabase.from('agents').select('*, skills(*)').eq('spec_id', decodeURIComponent(id)).single();

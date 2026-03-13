@@ -24,8 +24,9 @@ export async function GET(req: NextRequest) {
     .range(offset, offset + limit - 1);
 
   if (q) {
-    // Sanitize q — strip characters that break PostgREST filter syntax
-    const safe = q.replace(/[(),]/g, '').slice(0, 100);
+    // Keep only characters that cannot break PostgREST filter syntax.
+    // Strips `.`, `(`, `)`, `,`, `*` which are PostgREST/LIKE metacharacters.
+    const safe = q.replace(/[^a-zA-Z0-9 _\-@]/g, '').slice(0, 100);
     if (safe) {
       query = query.or(
         `name.ilike.%${safe}%,description.ilike.%${safe}%,provider_name.ilike.%${safe}%`
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest) {
   const agentIdHeader = req.headers.get('x-agent-id');
   if (!agentIdHeader) {
     return NextResponse.json({ error: 'X-Agent-ID header required' }, { status: 401 });
+  }
+  // Basic format check — prevent trivially empty or oversized identifiers
+  if (agentIdHeader.length < 4 || agentIdHeader.length > 128 || !/^[\w\-.@:]+$/.test(agentIdHeader)) {
+    return NextResponse.json({ error: 'X-Agent-ID is invalid' }, { status: 400 });
   }
 
   let body: unknown;
@@ -114,7 +119,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Update normalized skills atomically: insert new set, then delete stale rows
+  // Update normalized skills: upsert the new set (no duplicates via unique constraint),
+  // then delete any rows that are no longer in the spec.
   if (agent && spec.skills.length > 0) {
     const skillRows = spec.skills.map((skill) => ({
       agent_id: agent.id,
@@ -133,11 +139,13 @@ export async function POST(req: NextRequest) {
       sla_uptime: skill.sla?.uptimeSLA ?? null,
     }));
 
-    const { error: insertError } = await supabase.from('skills').insert(skillRows);
-    if (insertError) {
-      return NextResponse.json({ error: 'Failed to save skills: ' + insertError.message }, { status: 500 });
+    const { error: upsertError } = await supabase
+      .from('skills')
+      .upsert(skillRows, { onConflict: 'agent_id,skill_id' });
+    if (upsertError) {
+      return NextResponse.json({ error: 'Failed to save skills: ' + upsertError.message }, { status: 500 });
     }
-    // Only delete old rows after insert succeeds
+    // Remove skills that were deleted from the spec
     await supabase
       .from('skills')
       .delete()

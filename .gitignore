@@ -45,3 +45,5 @@ cli/node_modules/ echo cli/dist/ git rm -r --cached cli/node_modules cli/dist
 cli/node_modules/ echo cli/dist/ git rm -r --cached cli/node_modules cli/dist
 cli/node_modules/
 cli/dist/
+sdk/node_modules/
+sdk/dist/

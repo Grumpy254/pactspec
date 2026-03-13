@@ -6,20 +6,34 @@ import type { AgentRow } from '@/types/agent-spec';
 function AgentCard({ agent }: { agent: AgentRow }) {
   const skills = agent.spec?.skills ?? [];
   const pricingSkill = skills.find((s) => s.pricing);
+  const slaSkill = skills.find((s) => s.sla?.p99LatencyMs != null || s.sla?.uptimeSLA != null);
+  const hasPaidPricing = pricingSkill?.pricing && pricingSkill.pricing.model !== 'free';
 
   return (
     <a
       href={`/agents/${agent.id}`}
-      className="block bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-indigo-500 transition-colors"
+      className={`block bg-gray-900 border rounded-xl p-5 hover:border-indigo-500 transition-colors ${
+        agent.verified ? 'border-emerald-900/60' : 'border-gray-800'
+      }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h2 className="font-semibold text-white truncate">{agent.name}</h2>
             <span className="text-xs text-gray-500 font-mono shrink-0">v{agent.version}</span>
             {agent.verified && (
               <span className="shrink-0 inline-flex items-center gap-1 bg-emerald-900/50 text-emerald-400 text-xs px-2 py-0.5 rounded-full border border-emerald-800">
                 Verified
+              </span>
+            )}
+            {slaSkill && (
+              <span className="shrink-0 inline-flex items-center bg-blue-900/40 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-800/50">
+                SLA
+              </span>
+            )}
+            {hasPaidPricing && pricingSkill?.pricing?.protocol && pricingSkill.pricing.protocol !== 'none' && (
+              <span className="shrink-0 inline-flex items-center bg-violet-900/40 text-violet-400 text-xs px-2 py-0.5 rounded-full border border-violet-800/50">
+                {pricingSkill.pricing.protocol}
               </span>
             )}
           </div>
@@ -42,13 +56,16 @@ function AgentCard({ agent }: { agent: AgentRow }) {
         )}
       </div>
 
-      {(agent.tags.length > 0 || pricingSkill?.pricing) && (
-        <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-          <div className="flex gap-2 flex-wrap">
-            {agent.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="bg-gray-800/60 px-2 py-0.5 rounded">{tag}</span>
-            ))}
-          </div>
+      <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+        <div className="flex gap-2 flex-wrap">
+          {agent.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="bg-gray-800/60 px-2 py-0.5 rounded">{tag}</span>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          {slaSkill?.sla?.p99LatencyMs != null && (
+            <span className="text-blue-500 font-mono">p99 {slaSkill.sla.p99LatencyMs}ms</span>
+          )}
           {pricingSkill?.pricing && (
             <span className="font-mono text-indigo-400">
               {pricingSkill.pricing.model === 'free'
@@ -57,7 +74,7 @@ function AgentCard({ agent }: { agent: AgentRow }) {
             </span>
           )}
         </div>
-      )}
+      </div>
     </a>
   );
 }
@@ -68,17 +85,29 @@ export default function RegistryPage() {
   const [q, setQ] = useState('');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
 
   const fetchAgents = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    if (verifiedOnly) params.set('verified', 'true');
-    const res = await fetch(`/api/agents?${params}`);
-    const data = await res.json();
-    setAgents(data.agents ?? []);
-    setTotal(data.total ?? 0);
-    setLoading(false);
+    setFetchError('');
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      if (verifiedOnly) params.set('verified', 'true');
+      const res = await fetch(`/api/agents?${params}`);
+      if (!res.ok) throw new Error(`Registry returned ${res.status}`);
+      const data = await res.json();
+      // Verified agents float to top; within each group preserve server order
+      const sorted = [...(data.agents ?? [])].sort(
+        (a: AgentRow, b: AgentRow) => Number(b.verified) - Number(a.verified)
+      );
+      setAgents(sorted);
+      setTotal(data.total ?? 0);
+    } catch (err) {
+      setFetchError((err as Error).message ?? 'Failed to load agents');
+    } finally {
+      setLoading(false);
+    }
   }, [q, verifiedOnly]);
 
   useEffect(() => {
@@ -157,6 +186,8 @@ export default function RegistryPage() {
       {/* Agent list */}
       {loading ? (
         <div className="text-center text-gray-500 py-20">Loading...</div>
+      ) : fetchError ? (
+        <div className="text-center text-red-400 py-20">{fetchError}</div>
       ) : agents.length === 0 ? (
         <div className="text-center text-gray-500 py-20">
           <p className="mb-4">No agents found.</p>
