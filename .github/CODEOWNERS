@@ -1,0 +1,20 @@
+# AgentSpec CODEOWNERS
+# These owners are required reviewers for changes to protected files.
+# See GOVERNANCE.md for the RFC process for spec changes.
+
+# Core spec — any change requires steward review
+/src/lib/schema/         @Grumpy254
+/public/schema/          @Grumpy254
+
+# Governance and legal docs
+/GOVERNANCE.md           @Grumpy254
+/VERSIONING.md           @Grumpy254
+/IP_POLICY.md            @Grumpy254
+/SECURITY.md             @Grumpy254
+
+# Security-critical code
+/src/lib/validator.ts    @Grumpy254
+/src/lib/attestation.ts  @Grumpy254
+
+# Database migrations — irreversible changes
+/supabase/migrations/    @Grumpy254

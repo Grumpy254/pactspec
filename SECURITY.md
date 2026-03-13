@@ -25,7 +25,7 @@ or probe internal network topology.
 - Hostname blocklist: `localhost`, `0.0.0.0`, `metadata.google.internal`, etc.
 - Private IP range checks across all RFC-1918 and reserved ranges (IPv4 + IPv6)
 - DNS resolution at validation time: hostname resolved to IPs, each checked against private ranges
-- **DNS rebinding protection:** hostname resolved once; all fetches made to the resolved IP with a `Host` header, preventing mid-validation DNS changes
+- **DNS rebinding protection:** hostname resolved once to a safe IP; fetches use undici with a pinned DNS lookup callback so the TCP connection goes to the pre-resolved IP while the URL hostname is preserved for TLS SNI and certificate validation
 - Optional `VALIDATION_HOST_ALLOWLIST` for locked-down deployments
 
 **Residual risk:** Publicly routable IPs that are later re-assigned to private infrastructure. Mitigated by allowlisting in production.
