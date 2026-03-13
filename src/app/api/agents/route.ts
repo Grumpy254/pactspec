@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { validateAgentSpec } from '@/lib/validator';
+import { specsEqual } from '@/lib/spec-hash';
 import type { AgentSpec } from '@/types/agent-spec';
 
 // GET /api/agents?q=&tags=&verified=true
@@ -9,8 +10,11 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get('q') ?? '';
   const tagsParam = searchParams.get('tags');
   const verifiedParam = searchParams.get('verified');
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100);
-  const offset = parseInt(searchParams.get('offset') ?? '0');
+
+  const rawLimit = parseInt(searchParams.get('limit') ?? '50', 10);
+  const rawOffset = parseInt(searchParams.get('offset') ?? '0', 10);
+  const limit = Math.min(Number.isFinite(rawLimit) ? rawLimit : 50, 100);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
 
   const supabase = await createClient();
   let query = supabase
@@ -20,7 +24,13 @@ export async function GET(req: NextRequest) {
     .range(offset, offset + limit - 1);
 
   if (q) {
-    query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%,provider_name.ilike.%${q}%`);
+    // Sanitize q — strip characters that break PostgREST filter syntax
+    const safe = q.replace(/[(),]/g, '').slice(0, 100);
+    if (safe) {
+      query = query
+        .ilike('name', `%${safe}%`)
+        .or(`description.ilike.%${safe}%,provider_name.ilike.%${safe}%`);
+    }
   }
   if (tagsParam) {
     const tags = tagsParam.split(',').map((t) => t.trim()).filter(Boolean);
@@ -40,7 +50,6 @@ export async function GET(req: NextRequest) {
 
 // POST /api/agents — publish new agent spec
 export async function POST(req: NextRequest) {
-  // Basic auth — X-Agent-ID header required
   const agentIdHeader = req.headers.get('x-agent-id');
   if (!agentIdHeader) {
     return NextResponse.json({ error: 'X-Agent-ID header required' }, { status: 401 });
@@ -59,27 +68,45 @@ export async function POST(req: NextRequest) {
   }
 
   const spec = body as AgentSpec;
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
-  // Upsert agent
+  const { data: existing, error: existingError } = await supabase
+    .from('agents')
+    .select('spec, verified, attestation_hash, verified_at')
+    .eq('spec_id', spec.id)
+    .maybeSingle();
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+
+  const shouldResetVerification =
+    existing != null && !specsEqual(existing.spec, spec);
+
+  const upsertPayload: Record<string, unknown> = {
+    spec_id: spec.id,
+    name: spec.name,
+    version: spec.version,
+    description: spec.description ?? null,
+    provider_name: spec.provider.name,
+    provider_url: spec.provider.url ?? null,
+    provider_did: spec.provider.did ?? null,
+    endpoint_url: spec.endpoint.url,
+    spec: spec,
+    tags: spec.tags ?? [],
+    updated_at: new Date().toISOString(),
+  };
+
+  if (shouldResetVerification) {
+    upsertPayload.verified = false;
+    upsertPayload.attestation_hash = null;
+    upsertPayload.verified_at = null;
+  }
+
+  // Upsert agent — reset verification when spec changes
   const { data: agent, error } = await supabase
     .from('agents')
-    .upsert(
-      {
-        spec_id: spec.id,
-        name: spec.name,
-        version: spec.version,
-        description: spec.description ?? null,
-        provider_name: spec.provider.name,
-        provider_url: spec.provider.url ?? null,
-        provider_did: spec.provider.did ?? null,
-        endpoint_url: spec.endpoint.url,
-        spec: spec,
-        tags: spec.tags ?? [],
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'spec_id', ignoreDuplicates: false }
-    )
+    .upsert(upsertPayload, { onConflict: 'spec_id', ignoreDuplicates: false })
     .select()
     .single();
 
@@ -87,7 +114,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Upsert normalized skills
+  // Update normalized skills atomically: insert new set, then delete stale rows
   if (agent && spec.skills.length > 0) {
     const skillRows = spec.skills.map((skill) => ({
       agent_id: agent.id,
@@ -106,9 +133,16 @@ export async function POST(req: NextRequest) {
       sla_uptime: skill.sla?.uptimeSLA ?? null,
     }));
 
-    // Delete old skills first then insert fresh
-    await supabase.from('skills').delete().eq('agent_id', agent.id);
-    await supabase.from('skills').insert(skillRows);
+    const { error: insertError } = await supabase.from('skills').insert(skillRows);
+    if (insertError) {
+      return NextResponse.json({ error: 'Failed to save skills: ' + insertError.message }, { status: 500 });
+    }
+    // Only delete old rows after insert succeeds
+    await supabase
+      .from('skills')
+      .delete()
+      .eq('agent_id', agent.id)
+      .not('skill_id', 'in', `(${spec.skills.map((s) => `"${s.id}"`).join(',')})`);
   }
 
   return NextResponse.json({ agent }, { status: 201 });

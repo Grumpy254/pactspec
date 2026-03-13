@@ -75,16 +75,24 @@ export default function PublishPage() {
       return;
     }
 
-    const res = await fetch('/api/agents', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Agent-ID': agentId || 'anonymous',
-      },
-      body: JSON.stringify(spec),
-    });
+    let res: Response;
+    let data: { agent?: { id: string }; errors?: string[]; error?: string };
+    try {
+      res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Agent-ID': agentId || 'anonymous',
+        },
+        body: JSON.stringify(spec),
+      });
+      data = await res.json();
+    } catch {
+      setStatus('error');
+      setResult({ errors: ['Network error — could not reach the registry'] });
+      return;
+    }
 
-    const data = await res.json();
     if (res.ok) {
       setStatus('success');
       setResult({ id: data.agent?.id });

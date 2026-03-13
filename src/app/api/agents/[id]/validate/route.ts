@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { runValidation } from '@/lib/validator';
 import type { AgentRow } from '@/types/agent-spec';
 
@@ -20,7 +20,8 @@ export async function POST(
     return NextResponse.json({ error: 'skillId is required' }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = await createClient();      // reads
+  const adminDb = createServiceRoleClient(); // writes
 
   const isUuid = /^[0-9a-f-]{36}$/.test(id);
   const { data: agent, error } = isUuid
@@ -31,17 +32,31 @@ export async function POST(
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
   }
 
-  // Insert pending run
-  const { data: run } = await supabase
+  // Insert run record — capture insert error so we can still return a result
+  const { data: run, error: runInsertError } = await adminDb
     .from('validation_runs')
     .insert({ agent_id: agent.id, skill_id: body.skillId, status: 'RUNNING' })
     .select()
     .single();
 
-  const result = await runValidation(agent as AgentRow, body.skillId);
+  if (runInsertError) {
+    return NextResponse.json({ error: 'Failed to create validation run' }, { status: 500 });
+  }
+
+  let result;
+  try {
+    result = await runValidation(agent as AgentRow, body.skillId);
+  } catch (err) {
+    // Ensure run is never left in RUNNING state
+    await adminDb
+      .from('validation_runs')
+      .update({ status: 'ERROR', error: (err as Error).message })
+      .eq('id', run.id);
+    return NextResponse.json({ error: 'Validation failed unexpectedly' }, { status: 500 });
+  }
 
   // Update run record
-  await supabase
+  await adminDb
     .from('validation_runs')
     .update({
       status: result.status,
@@ -50,11 +65,11 @@ export async function POST(
       error: result.error ?? null,
       attestation_hash: result.attestationHash ?? null,
     })
-    .eq('id', run?.id);
+    .eq('id', run.id);
 
   // If passed, mark agent verified
   if (result.status === 'PASSED' && result.attestationHash) {
-    await supabase
+    await adminDb
       .from('agents')
       .update({
         verified: true,
@@ -64,5 +79,5 @@ export async function POST(
       .eq('id', agent.id);
   }
 
-  return NextResponse.json({ runId: run?.id, ...result });
+  return NextResponse.json({ runId: run.id, ...result });
 }

@@ -85,8 +85,14 @@ AgentSpec fetches the test suite, runs each test against the agent endpoint, and
 
 ```bash
 cp .env.local.example .env.local
-# fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+# fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY
+
+# Optional: lock down validation to known hosts
+# VALIDATION_HOST_ALLOWLIST=example.com,tests.example.com
+# VALIDATION_ALLOW_PRIVATE_IPS=false
 
 npx supabase db push   # run migrations
 npm run dev
 ```
+
+Note: migrations enable RLS. Server routes require `SUPABASE_SERVICE_ROLE_KEY` for writes.

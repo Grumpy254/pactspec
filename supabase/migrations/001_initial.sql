@@ -53,3 +53,15 @@ CREATE TABLE validation_runs (
   attestation_hash TEXT,
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Row level security
+ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE validation_runs ENABLE ROW LEVEL SECURITY;
+
+-- Public read access for registry data
+CREATE POLICY "Public read agents" ON agents
+  FOR SELECT USING (true);
+
+CREATE POLICY "Public read skills" ON skills
+  FOR SELECT USING (true);
