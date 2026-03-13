@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
     // Sanitize q — strip characters that break PostgREST filter syntax
     const safe = q.replace(/[(),]/g, '').slice(0, 100);
     if (safe) {
-      query = query
-        .ilike('name', `%${safe}%`)
-        .or(`description.ilike.%${safe}%,provider_name.ilike.%${safe}%`);
+      query = query.or(
+        `name.ilike.%${safe}%,description.ilike.%${safe}%,provider_name.ilike.%${safe}%`
+      );
     }
   }
   if (tagsParam) {

@@ -130,11 +130,27 @@ export async function assertSafeUrl(rawUrl: string, label: string): Promise<void
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Resolve hostname to IP once, then fetch by IP to eliminate DNS rebinding window.
+// The original Host header is preserved so the server can use virtual hosting.
+async function resolveToIp(hostname: string, port: string, protocol: string): Promise<string> {
+  if (isIP(hostname)) return hostname;
+  const addresses = await resolveHost(hostname);
+  const safe = addresses.find((a) => !isPrivateIp(a));
+  if (!safe) throw new Error(`${hostname} resolves only to private addresses`);
+  // Format IPv6 addresses with brackets
+  return isIP(safe) === 6 ? `[${safe}]` : safe;
+}
+
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    const parsed = new URL(url);
+    const ip = await resolveToIp(parsed.hostname, parsed.port, parsed.protocol);
+    const fetchUrl = `${parsed.protocol}//${ip}${parsed.port ? `:${parsed.port}` : ''}${parsed.pathname}${parsed.search}`;
+    const headers = new Headers(options.headers as HeadersInit | undefined);
+    if (!headers.has('Host')) headers.set('Host', parsed.hostname);
+    return await fetch(fetchUrl, { ...options, headers, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }

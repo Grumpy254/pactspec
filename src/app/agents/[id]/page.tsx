@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import type { AgentRow, AgentSpecSkill } from '@/types/agent-spec';
 
 function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string }) {
@@ -126,8 +126,8 @@ function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string
   );
 }
 
-export default function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function AgentDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const [agent, setAgent] = useState<AgentRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

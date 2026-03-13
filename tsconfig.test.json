@@ -9,9 +9,9 @@
     "types": ["node"]
   },
   "include": [
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.test.mts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.mts"
   ],
   "exclude": ["node_modules"]
 }
