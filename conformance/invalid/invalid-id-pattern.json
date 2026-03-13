@@ -1,5 +1,5 @@
 {
-  "_comment": "Must be rejected: id must match urn:agent:{provider}:{name} pattern",
+  "_comment": "Must be rejected: id must match urn:pactspec:{provider}:{name} pattern",
   "_expectedError": "pattern",
   "specVersion": "1.0.0",
   "id": "not-a-valid-urn",

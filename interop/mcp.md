@@ -1,12 +1,12 @@
-# AgentSpec <-> MCP Interoperability Guide
+# PactSpec <-> MCP Interoperability Guide
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is a transport
-and tool-invocation standard between AI models and tool servers. AgentSpec is a
+and tool-invocation standard between AI models and tool servers. PactSpec is a
 capability declaration and verification standard for AI agents.
 
 They are **complementary, not competing**:
 
-| Concern | MCP | AgentSpec |
+| Concern | MCP | PactSpec |
 |---------|-----|-----------|
 | How to call a tool | Yes | No |
 | What a tool does (schema) | Partial | Yes |
@@ -15,46 +15,46 @@ They are **complementary, not competing**:
 | Cryptographic verification | No | Yes |
 | Machine-readable registry | No | Yes |
 
-An MCP server can publish an AgentSpec to make itself discoverable, priceable,
+An MCP server can publish a PactSpec to make itself discoverable, priceable,
 and verifiable - without changing any of its MCP implementation.
 
 ---
 
 ## Conceptual mapping
 
-| MCP concept | AgentSpec equivalent | Notes |
+| MCP concept | PactSpec equivalent | Notes |
 |-------------|---------------------|-------|
 | `ServerInfo.name` | `name` | Direct |
 | `ServerInfo.version` | `version` | Direct |
-| `Tool.name` | `skills[].id` | Hyphenate for AgentSpec id |
+| `Tool.name` | `skills[].id` | Hyphenate for PactSpec id |
 | `Tool.description` | `skills[].description` | Direct |
 | `Tool.inputSchema` | `skills[].inputSchema` | JSON Schema - direct passthrough |
 | *(none)* | `skills[].outputSchema` | MCP doesn't define output schema |
 | Server transport URL | `endpoint.url` | The HTTP/SSE endpoint |
-| *(none)* | `skills[].pricing` | AgentSpec-only |
-| *(none)* | `skills[].sla` | AgentSpec-only |
-| *(none)* | `skills[].testSuite` | AgentSpec-only |
+| *(none)* | `skills[].pricing` | PactSpec-only |
+| *(none)* | `skills[].sla` | PactSpec-only |
+| *(none)* | `skills[].testSuite` | PactSpec-only |
 
 ---
 
-## Pattern: MCP server with AgentSpec declaration
+## Pattern: MCP server with PactSpec declaration
 
-An MCP server can serve its AgentSpec at `/.well-known/agentspec.json`:
+An MCP server can serve its PactSpec at `/.well-known/pactspec.json`:
 
 ```
-GET /.well-known/agentspec.json
+GET /.well-known/pactspec.json
 ```
 
 This allows discovery without modifying the MCP protocol itself.
 
-### Example AgentSpec for an MCP server
+### Example PactSpec for an MCP server
 
 MCP server with two tools (`read_file`, `write_file`):
 
 ```json
 {
   "specVersion": "1.0.0",
-  "id": "urn:agent:acme:filesystem-mcp",
+  "id": "urn:pactspec:acme:filesystem-mcp",
   "name": "Filesystem MCP Server",
   "version": "1.0.0",
   "provider": { "name": "Acme", "url": "https://acme.ai" },
@@ -104,19 +104,19 @@ MCP server with two tools (`read_file`, `write_file`):
 
 ---
 
-## Converting MCP tool list -> AgentSpec
+## Converting MCP tool list -> PactSpec
 
 ### Using the CLI (planned)
 ```bash
-agentspec init --from-mcp https://mcp.acme.ai --out agentspec.json
+pactspec init --from-mcp https://mcp.acme.ai --out pactspec.json
 ```
 
-The CLI will call the MCP `tools/list` endpoint and generate a skeleton AgentSpec.
+The CLI will call the MCP `tools/list` endpoint and generate a skeleton PactSpec.
 You then fill in `pricing`, `sla`, and `testSuite` manually.
 
 ### Manual rules
 
-1. Each MCP `Tool` -> one AgentSpec `skill`
+1. Each MCP `Tool` -> one PactSpec `skill`
 2. `Tool.name` -> `skill.id` (lowercase, hyphenated)
 3. `Tool.inputSchema` -> `skill.inputSchema` (direct passthrough - MCP already uses JSON Schema)
 4. Add `outputSchema` manually - MCP doesn't define this
@@ -129,9 +129,9 @@ You then fill in `pricing`, `sla`, and `testSuite` manually.
 ```
 AI agent wants to find a file-reading capability
         v
-Queries AgentSpec registry: GET /api/agents?q=filesystem
+Queries PactSpec registry: GET /api/agents?q=filesystem
         v
-Finds AgentSpec for Filesystem MCP Server
+Finds PactSpec for Filesystem MCP Server
         v
 Reads endpoint.url + auth config
         v
@@ -140,13 +140,13 @@ Connects via standard MCP transport
 Invokes tools normally
 ```
 
-AgentSpec handles **discovery and trust**; MCP handles **invocation**.
+PactSpec handles **discovery and trust**; MCP handles **invocation**.
 
 ---
 
 ## Key difference: outputSchema
 
-MCP does not define the shape of tool responses. AgentSpec requires `outputSchema`
+MCP does not define the shape of tool responses. PactSpec requires `outputSchema`
 for every skill. This is intentional - it enables:
 
 1. Automated test suite generation
@@ -154,5 +154,5 @@ for every skill. This is intentional - it enables:
 3. Type-safe client generation
 
 When migrating from MCP, define your `outputSchema` based on what your tool
-actually returns. This is the most valuable addition AgentSpec makes to the
+actually returns. This is the most valuable addition PactSpec makes to the
 MCP ecosystem.

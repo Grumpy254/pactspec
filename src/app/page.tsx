@@ -123,7 +123,7 @@ export default function RegistryPage() {
           Open Protocol Standard
         </div>
         <h1 className="text-6xl font-bold text-white mb-4 tracking-tight">
-          AgentSpec
+          PactSpec
         </h1>
         <p className="text-xl text-indigo-400 font-mono mb-3">
           Pricing. Test suites. Attestation. In one spec.

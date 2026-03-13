@@ -1,7 +1,7 @@
 {
-  "_comment": "Full-featured AgentSpec — all optional fields populated",
+  "_comment": "Full-featured PactSpec — all optional fields populated",
   "specVersion": "1.0.0",
-  "id": "urn:agent:test:full-featured",
+  "id": "urn:pactspec:test:full-featured",
   "name": "Full Featured Agent",
   "version": "2.1.0",
   "description": "A full-featured agent for conformance testing.",

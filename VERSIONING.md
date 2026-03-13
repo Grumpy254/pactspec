@@ -1,14 +1,14 @@
-# AgentSpec Versioning Policy
+# PactSpec Versioning Policy
 
 ## Spec versioning
 
-The spec version is declared in every AgentSpec document:
+The spec version is declared in every PactSpec document:
 
 ```json
 { "specVersion": "1.0.0" }
 ```
 
-AgentSpec follows [Semantic Versioning](https://semver.org):
+PactSpec follows [Semantic Versioning](https://semver.org):
 
 | Version part | Meaning |
 |---|---|

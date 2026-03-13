@@ -9,34 +9,34 @@ export type PricingModel = 'per-invocation' | 'per-token' | 'per-second' | 'free
 export type PricingCurrency = 'USD' | 'USDC' | 'SOL';
 export type PricingProtocol = 'x402' | 'stripe' | 'none';
 
-export interface AgentSpecPricing {
+export interface PactSpecPricing {
   model: PricingModel;
   amount: number;
   currency: PricingCurrency;
   protocol?: PricingProtocol;
 }
 
-export interface AgentSpecSLA {
+export interface PactSpecSLA {
   p50LatencyMs?: number;
   p99LatencyMs?: number;
   uptimeSLA?: number;
   maxConcurrency?: number;
 }
 
-export interface AgentSpecSkill {
+export interface PactSpecSkill {
   id: string;
   name: string;
   description: string;
   tags?: string[];
   inputSchema: Record<string, unknown>;
   outputSchema: Record<string, unknown>;
-  pricing?: AgentSpecPricing;
-  sla?: AgentSpecSLA;
+  pricing?: PactSpecPricing;
+  sla?: PactSpecSLA;
   testSuite?: { url: string; type?: 'http-roundtrip' | 'json-schema-validation' };
   examples?: Array<{ description?: string; input: unknown; expectedOutput: unknown }>;
 }
 
-export interface AgentSpec {
+export interface PactSpec {
   specVersion: '1.0.0';
   id: string;
   name: string;
@@ -44,7 +44,7 @@ export interface AgentSpec {
   description?: string;
   provider: { name: string; url?: string; did?: string; contact?: string };
   endpoint: { url: string; auth?: { type: AuthType; header?: string } };
-  skills: AgentSpecSkill[];
+  skills: PactSpecSkill[];
   tags?: string[];
   license?: string;
   links?: { documentation?: string; repository?: string };
@@ -58,7 +58,7 @@ export interface AgentRecord {
   description: string | null;
   providerName: string;
   endpointUrl: string;
-  spec: AgentSpec;
+  spec: PactSpec;
   tags: string[];
   verified: boolean;
   attestationHash: string | null;
@@ -86,7 +86,7 @@ export interface ValidateResult {
 }
 
 /**
- * Validate an AgentSpec document against the canonical v1 schema.
+ * Validate a PactSpec document against the canonical v1 schema.
  * Synchronous — no network calls.
  */
 export function validate(spec: unknown): ValidateResult {
@@ -101,32 +101,32 @@ export function validate(spec: unknown): ValidateResult {
 
 // ── Registry client ───────────────────────────────────────────────────────────
 
-const DEFAULT_REGISTRY = 'https://agentspec.dev';
+const DEFAULT_REGISTRY = 'https://pactspec.dev';
 
 export interface PublishOptions {
   /** X-Agent-ID header — identifies the publisher. Min 4 chars, max 128. */
   agentId: string;
-  /** Registry base URL. Defaults to https://agentspec.dev */
+  /** Registry base URL. Defaults to https://pactspec.dev */
   registry?: string;
 }
 
 export interface PublishResult {
   /** Registry UUID for this agent */
   id: string;
-  /** Spec URN e.g. urn:agent:acme:my-agent */
+  /** Spec URN e.g. urn:pactspec:acme:my-agent */
   specId: string;
   /** Whether the agent is currently verified */
   verified: boolean;
 }
 
 /**
- * Publish an AgentSpec to the registry.
+ * Publish a PactSpec to the registry.
  * Validates the spec locally before sending.
  * Throws on validation failure or network/HTTP error.
  */
-export async function publish(spec: AgentSpec, options: PublishOptions): Promise<PublishResult> {
+export async function publish(spec: PactSpec, options: PublishOptions): Promise<PublishResult> {
   const { valid, errors } = validate(spec);
-  if (!valid) throw new Error(`Invalid AgentSpec: ${errors.join('; ')}`);
+  if (!valid) throw new Error(`Invalid PactSpec: ${errors.join('; ')}`);
 
   const registry = options.registry ?? DEFAULT_REGISTRY;
   const res = await fetch(`${registry}/api/agents`, {
@@ -154,7 +154,7 @@ export async function publish(spec: AgentSpec, options: PublishOptions): Promise
 }
 
 export interface VerifyOptions {
-  /** Registry base URL. Defaults to https://agentspec.dev */
+  /** Registry base URL. Defaults to https://pactspec.dev */
   registry?: string;
 }
 
@@ -219,7 +219,7 @@ export async function getAgent(
     description: a.description as string | null,
     providerName: a.provider_name as string,
     endpointUrl: a.endpoint_url as string,
-    spec: a.spec as AgentSpec,
+    spec: a.spec as PactSpec,
     tags: a.tags as string[],
     verified: a.verified as boolean,
     attestationHash: a.attestation_hash as string | null,
@@ -273,7 +273,7 @@ export async function search(options?: SearchOptions): Promise<SearchResult> {
     description: a.description as string | null,
     providerName: a.provider_name as string,
     endpointUrl: a.endpoint_url as string,
-    spec: a.spec as AgentSpec,
+    spec: a.spec as PactSpec,
     tags: a.tags as string[],
     verified: a.verified as boolean,
     attestationHash: a.attestation_hash as string | null,
@@ -289,10 +289,10 @@ export async function search(options?: SearchOptions): Promise<SearchResult> {
   };
 }
 
-// ── AgentSpecClient class ─────────────────────────────────────────────────────
+// ── PactSpecClient class ──────────────────────────────────────────────────────
 
 export interface ClientOptions {
-  /** Registry base URL. Defaults to https://agentspec.dev */
+  /** Registry base URL. Defaults to https://pactspec.dev */
   registry?: string;
   /** Default X-Agent-ID used for publish calls */
   agentId?: string;
@@ -302,12 +302,12 @@ export interface ClientOptions {
  * Convenience class for those who prefer an OOP interface.
  *
  * @example
- * const client = new AgentSpecClient({ agentId: 'my-agent@acme.com' });
+ * const client = new PactSpecClient({ agentId: 'my-agent@acme.com' });
  * const { valid } = client.validate(mySpec);
  * const { id } = await client.publish(mySpec);
  * const result = await client.verify(id, 'my-skill');
  */
-export class AgentSpecClient {
+export class PactSpecClient {
   private registry: string;
   private agentId?: string;
 
@@ -320,7 +320,7 @@ export class AgentSpecClient {
     return validate(spec);
   }
 
-  async publish(spec: AgentSpec, agentId?: string): Promise<PublishResult> {
+  async publish(spec: PactSpec, agentId?: string): Promise<PublishResult> {
     const id = agentId ?? this.agentId;
     if (!id) throw new Error('agentId is required (pass it to the constructor or publish call)');
     return publish(spec, { registry: this.registry, agentId: id });

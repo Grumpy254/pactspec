@@ -2,7 +2,7 @@
   "_comment": "Must be rejected: version must be semver x.y.z",
   "_expectedError": "pattern",
   "specVersion": "1.0.0",
-  "id": "urn:agent:test:bad-semver",
+  "id": "urn:pactspec:test:bad-semver",
   "name": "Bad Semver",
   "version": "v1.0",
   "provider": { "name": "Test" },

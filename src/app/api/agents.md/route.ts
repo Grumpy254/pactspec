@@ -29,8 +29,8 @@ export async function GET() {
 
   const now = new Date().toISOString();
   const lines: string[] = [
-    '# AgentSpec Registry',
-    `> schema: https://agentspec.dev/schema/v1.json`,
+    '# PactSpec Registry',
+    `> schema: https://pactspec.dev/schema/v1.json`,
     `> updated: ${now}`,
     `> total: ${count ?? 0}`,
     '',

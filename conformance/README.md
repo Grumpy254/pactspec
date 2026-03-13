@@ -1,6 +1,6 @@
-# AgentSpec Conformance Test Suite
+# PactSpec Conformance Test Suite
 
-This directory contains the canonical test vectors for AgentSpec v1 validators.
+This directory contains the canonical test vectors for PactSpec v1 validators.
 A conformant validator MUST accept all documents in `valid/` and MUST reject all
 documents in `invalid/` with a meaningful error.
 
@@ -15,11 +15,11 @@ conformance/
 ## Running against your validator
 
 ```bash
-# Using the AgentSpec CLI (planned)
-agentspec conformance --validator https://your-validator/api/validate
+# Using the PactSpec CLI (planned)
+pactspec conformance --validator https://your-validator/api/validate
 
 # Using the hosted registry validator (planned)
-agentspec conformance --validator https://agentspec.dev/api/spec/validate
+pactspec conformance --validator https://pactspec.dev/api/spec/validate
 ```
 
 Exit code 0 = all tests passed. Exit code 1 = one or more failures.

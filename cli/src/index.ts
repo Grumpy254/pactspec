@@ -2,23 +2,37 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { readFileSync, writeFileSync, readdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve, join, extname } from 'path';
 import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
+import { parse as parseYaml } from 'yaml';
 // Bundled schema — always available regardless of install location
 import bundledSchema from '../../src/lib/schema/agent-spec.v1.json';
 
 const program = new Command();
 
 program
-  .name('agentspec')
-  .description('Official CLI for the AgentSpec protocol')
+  .name('pactspec')
+  .description('Official CLI for the PactSpec protocol')
   .version('0.1.0');
+
+function parseSourceFile(file: string): Record<string, unknown> {
+  const raw = readFileSync(resolve(file), 'utf-8');
+  const ext = extname(file).toLowerCase();
+  if (ext === '.yaml' || ext === '.yml') {
+    const doc = parseYaml(raw);
+    if (!doc || typeof doc !== 'object') {
+      throw new Error('YAML did not parse to an object');
+    }
+    return doc as Record<string, unknown>;
+  }
+  return JSON.parse(raw) as Record<string, unknown>;
+}
 
 // ── validate ─────────────────────────────────────────────────────────────────
 program
   .command('validate <file>')
-  .description('Validate an AgentSpec JSON file against the v1 schema')
+  .description('Validate a PactSpec JSON file against the v1 schema')
   .action(async (file: string) => {
     const ajv = new Ajv({ strict: false });
     addFormats(ajv);
@@ -37,7 +51,7 @@ program
     const valid = validate(spec);
 
     if (valid) {
-      console.log(pc.green('✓ Valid AgentSpec document'));
+      console.log(pc.green('✓ Valid PactSpec document'));
     } else {
       console.error(pc.red('✗ Validation failed:'));
       for (const err of validate.errors ?? []) {
@@ -50,8 +64,8 @@ program
 // ── publish ───────────────────────────────────────────────────────────────────
 program
   .command('publish <file>')
-  .description('Publish an AgentSpec JSON file to the registry')
-  .option('-r, --registry <url>', 'Registry URL', 'https://agentspec.dev')
+  .description('Publish a PactSpec JSON file to the registry')
+  .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
   .option('-k, --agent-id <id>', 'Your agent identifier (X-Agent-ID header)')
   .action(async (file: string, opts: { registry: string; agentId?: string }) => {
     let spec: unknown;
@@ -102,7 +116,7 @@ program
 program
   .command('verify <agent-id> <skill-id>')
   .description('Trigger a validation run for an agent skill')
-  .option('-r, --registry <url>', 'Registry URL', 'https://agentspec.dev')
+  .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
   .action(async (agentId: string, skillId: string, opts: { registry: string }) => {
     console.log(pc.dim(`Running validation for ${agentId} / ${skillId}...`));
 
@@ -150,7 +164,7 @@ program
 program
   .command('conformance')
   .description('Run conformance test suite against a validator endpoint')
-  .option('-r, --registry <url>', 'Registry URL', 'https://agentspec.dev')
+  .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
   .action(async (opts: { registry: string }) => {
     const ajv = new Ajv({ strict: false });
     addFormats(ajv);
@@ -198,12 +212,12 @@ program
 // ── init ──────────────────────────────────────────────────────────────────────
 program
   .command('init')
-  .description('Generate a skeleton AgentSpec JSON file')
-  .option('-o, --out <file>', 'Output file', 'agentspec.json')
+  .description('Generate a skeleton PactSpec JSON file')
+  .option('-o, --out <file>', 'Output file', 'pactspec.json')
   .action((opts: { out: string }) => {
     const skeleton = {
       specVersion: '1.0.0',
-      id: 'urn:agent:your-org:your-agent',
+      id: 'urn:pactspec:your-org:your-agent',
       name: 'Your Agent Name',
       version: '1.0.0',
       description: 'Describe what your agent does.',
@@ -239,14 +253,14 @@ program
 
     writeFileSync(resolve(opts.out), JSON.stringify(skeleton, null, 2));
     console.log(pc.green(`✓ Created ${opts.out}`));
-    console.log(pc.dim('Edit the file, then run: agentspec validate ' + opts.out));
+    console.log(pc.dim('Edit the file, then run: pactspec validate ' + opts.out));
   });
 
 // ── convert ───────────────────────────────────────────────────────────────────
 program
   .command('convert <format> <file>')
-  .description('Convert an OpenAPI or MCP document to AgentSpec (formats: openapi, mcp)')
-  .option('-o, --out <file>', 'Output file (default: agentspec.json)')
+  .description('Convert an OpenAPI or MCP document to PactSpec (formats: openapi, mcp)')
+  .option('-o, --out <file>', 'Output file (default: pactspec.json)')
   .action((format: string, file: string, opts: { out?: string }) => {
     if (format !== 'openapi' && format !== 'mcp') {
       console.error(pc.red(`✗ Unknown format: ${format}. Supported: openapi, mcp`));
@@ -255,36 +269,39 @@ program
 
     let source: Record<string, unknown>;
     try {
-      source = JSON.parse(readFileSync(resolve(file), 'utf-8'));
-    } catch {
+      source = parseSourceFile(file);
+    } catch (err) {
       console.error(pc.red(`✗ Could not read or parse ${file}`));
+      if (err instanceof Error && err.message) {
+        console.error(pc.red(`  ${err.message}`));
+      }
       process.exit(1);
     }
 
     if (format === 'openapi') {
       const result = convertOpenApi(source);
-      const outFile = opts.out ?? 'agentspec.json';
+      const outFile = opts.out ?? 'pactspec.json';
       writeFileSync(resolve(outFile), JSON.stringify(result.spec, null, 2));
       console.log(pc.green(`✓ Converted to ${outFile}`));
       if (result.warnings.length > 0) {
         console.log(pc.yellow('\nWarnings (review before publishing):'));
         for (const w of result.warnings) console.log(pc.yellow(`  ! ${w}`));
       }
-      console.log(pc.dim(`\nNext: agentspec validate ${outFile}`));
+      console.log(pc.dim(`\nNext: pactspec validate ${outFile}`));
     } else {
       const result = convertMcp(source);
-      const outFile = opts.out ?? 'agentspec.json';
+      const outFile = opts.out ?? 'pactspec.json';
       writeFileSync(resolve(outFile), JSON.stringify(result.spec, null, 2));
       console.log(pc.green(`✓ Converted to ${outFile}`));
       if (result.warnings.length > 0) {
         console.log(pc.yellow('\nWarnings (review before publishing):'));
         for (const w of result.warnings) console.log(pc.yellow(`  ! ${w}`));
       }
-      console.log(pc.dim(`\nNext: agentspec validate ${outFile}`));
+      console.log(pc.dim(`\nNext: pactspec validate ${outFile}`));
     }
   });
 
-// ─── OpenAPI 3.x → AgentSpec converter ───────────────────────────────────────
+// ─── OpenAPI 3.x → PactSpec converter ────────────────────────────────────────
 
 interface ConvertResult {
   spec: Record<string, unknown>;
@@ -321,7 +338,7 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
   const titleSlug = slugify(rawTitle);
   const providerSlug = titleSlug.split('-')[0] ?? 'provider';
   const agentSlug = titleSlug || 'agent';
-  const specId = `urn:agent:${providerSlug}:${agentSlug}`;
+  const specId = `urn:pactspec:${providerSlug}:${agentSlug}`;
 
   const paths = (doc.paths ?? {}) as Record<string, Record<string, unknown>>;
   const skills: Record<string, unknown>[] = [];
@@ -419,7 +436,7 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
   return { spec, warnings };
 }
 
-// ─── MCP tool manifest → AgentSpec converter ─────────────────────────────────
+// ─── MCP tool manifest → PactSpec converter ──────────────────────────────────
 
 function convertMcp(doc: Record<string, unknown>): ConvertResult {
   const warnings: string[] = [];
@@ -469,7 +486,7 @@ function convertMcp(doc: Record<string, unknown>): ConvertResult {
 
   const spec = {
     specVersion: '1.0.0',
-    id: `urn:agent:${providerSlug}:${agentSlug}`,
+    id: `urn:pactspec:${providerSlug}:${agentSlug}`,
     name: serverName,
     version: serverVersion,
     provider: { name: serverName, url: serverUrl.startsWith('http') ? new URL(serverUrl).origin : undefined },

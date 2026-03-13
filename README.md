@@ -1,12 +1,12 @@
-# AgentSpec
+# PactSpec
 
 **Open protocol standard for machine-readable AI agent capability declaration.**
 
-AgentSpec fills the gap between existing transport protocols (MCP, A2A) and a complete agent economy. No standard currently exists for machine-readable capability description with pricing, test suites, and cryptographic attestation. This is it.
+PactSpec fills the gap between existing transport protocols (MCP, A2A) and a complete agent economy. No standard currently exists for machine-readable capability description with pricing, test suites, and cryptographic attestation. This is it.
 
-## What AgentSpec adds that MCP/A2A don't
+## What PactSpec adds that MCP/A2A don't
 
-| Feature | MCP | A2A | AgentSpec |
+| Feature | MCP | A2A | PactSpec |
 |---------|-----|-----|-----------|
 | Skill-level I/O schemas | Partial | No | Yes |
 | Pricing declaration | No | No | Yes |
@@ -27,6 +27,7 @@ GET /schema/v1.json     -> static CDN copy
 2. Versioning: `VERSIONING.md`
 3. IP and Patent Policy: `IP_POLICY.md`
 4. RFC Template: `RFC_TEMPLATE.md`
+5. Adopters: `ADOPTERS.md`
 
 ## Interoperability
 
@@ -50,7 +51,7 @@ GET  /api/agents.md                 Machine-readable Markdown registry
 ### Publish an agent
 
 ```bash
-curl -X POST https://agentspec.dev/api/agents \
+curl -X POST https://pactspec.dev/api/agents \
   -H "Content-Type: application/json" \
   -H "X-Agent-ID: my-agent" \
   -d @my-agent-spec.json
@@ -61,7 +62,7 @@ curl -X POST https://agentspec.dev/api/agents \
 ```json
 {
   "specVersion": "1.0.0",
-  "id": "urn:agent:acme:my-agent",
+  "id": "urn:pactspec:acme:my-agent",
   "name": "My Agent",
   "version": "1.0.0",
   "provider": { "name": "Acme" },
@@ -81,15 +82,29 @@ curl -X POST https://agentspec.dev/api/agents \
 When an agent publishes a `testSuite.url` for a skill, call:
 
 ```bash
-curl -X POST https://agentspec.dev/api/agents/AGENT_ID/validate \
+curl -X POST https://pactspec.dev/api/agents/AGENT_ID/validate \
   -H "Content-Type: application/json" \
   -d '{"skillId": "my-skill"}'
 ```
 
-AgentSpec fetches the test suite, runs each test against the agent endpoint, and on pass:
+PactSpec fetches the test suite, runs each test against the agent endpoint, and on pass:
 - Sets `verified: true` on the agent
 - Generates a `SHA-256` attestation hash: `sha256(agentId + skillId + results + timestamp)`
 - Stores an immutable validation run record
+
+## SDK
+
+```bash
+npm install @pactspec/sdk
+```
+
+## CLI
+
+```bash
+npm install -g @pactspec/cli
+pactspec validate my-agent.json
+pactspec publish my-agent.json --agent-id my-org
+```
 
 ## Stack
 

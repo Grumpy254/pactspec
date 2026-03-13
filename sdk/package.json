@@ -1,7 +1,7 @@
 {
-  "name": "@agentspec/sdk",
+  "name": "@pactspec/sdk",
   "version": "0.1.0",
-  "description": "Official SDK for the AgentSpec protocol — validate, publish, and verify agents",
+  "description": "Official SDK for the PactSpec protocol — validate, publish, and verify agents",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -16,7 +16,7 @@
     "build": "tsc && node -e \"require('fs').copyFileSync('src/schema.json','dist/schema.json')\"",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["agentspec", "ai-agents", "sdk", "registry"],
+  "keywords": ["pactspec", "ai-agents", "sdk", "registry"],
   "license": "MIT",
   "dependencies": {
     "ajv": "^8.17.1",

@@ -18,7 +18,7 @@ test('isPrivateIp identifies private and reserved ranges', () => {
 test('assertSafeUrl rejects private IPs', async () => {
   process.env.VALIDATION_ALLOW_PRIVATE_IPS = 'false';
   await assert.rejects(
-    () => assertSafeUrl('http://127.0.0.1', 'endpoint.url'),
+    () => assertSafeUrl('https://127.0.0.1', 'endpoint.url'),
     /private|not allowed/i
   );
 });

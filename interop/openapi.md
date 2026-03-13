@@ -1,21 +1,21 @@
-# AgentSpec <-> OpenAPI Interoperability Guide
+# PactSpec <-> OpenAPI Interoperability Guide
 
-OpenAPI describes HTTP APIs. AgentSpec describes AI agent capabilities including
+OpenAPI describes HTTP APIs. PactSpec describes AI agent capabilities including
 pricing, SLAs, and executable verification. They are complementary: an agent
-with an OpenAPI spec can generate an AgentSpec; an AgentSpec can reference an
+with an OpenAPI spec can generate a PactSpec; a PactSpec can reference an
 OpenAPI spec for detailed endpoint documentation.
 
 ---
 
 ## Conceptual mapping
 
-| OpenAPI | AgentSpec | Notes |
+| OpenAPI | PactSpec | Notes |
 |---------|-----------|-------|
 | `info.title` | `name` | Direct mapping |
-| `info.version` | `version` | Must be semver in AgentSpec |
+| `info.version` | `version` | Must be semver in PactSpec |
 | `info.contact` | `provider.contact` | Email field |
 | `servers[0].url` | `endpoint.url` | Primary server URL |
-| `securitySchemes.bearerAuth` | `endpoint.auth.type: "bearer"` | Simplified in AgentSpec |
+| `securitySchemes.bearerAuth` | `endpoint.auth.type: "bearer"` | Simplified in PactSpec |
 | `paths./foo.post` | `skills[].id` | One skill per logical operation |
 | `paths./foo.post.requestBody.content.application/json.schema` | `skills[].inputSchema` | JSON Schema passthrough |
 | `paths./foo.post.responses.200.content.application/json.schema` | `skills[].outputSchema` | JSON Schema passthrough |
@@ -28,9 +28,9 @@ OpenAPI spec for detailed endpoint documentation.
 
 ## Fields with no OpenAPI equivalent
 
-These are AgentSpec-only and must be added manually:
+These are PactSpec-only and must be added manually:
 
-| AgentSpec field | Notes |
+| PactSpec field | Notes |
 |----------------|-------|
 | `skills[].pricing` | No OpenAPI equivalent - add via `x-pricing` extension first |
 | `skills[].sla` | No OpenAPI equivalent - add via `x-sla` extension first |
@@ -40,11 +40,11 @@ These are AgentSpec-only and must be added manually:
 
 ---
 
-## Converting OpenAPI -> AgentSpec
+## Converting OpenAPI -> PactSpec
 
 ### Automated (planned CLI command)
 ```bash
-agentspec init --from-openapi openapi.yaml --out agentspec.json
+pactspec init --from-openapi openapi.yaml --out pactspec.json
 ```
 
 ### Manual mapping rules
@@ -88,11 +88,11 @@ paths:
                   lineItems: { type: array }
 ```
 
-AgentSpec:
+PactSpec:
 ```json
 {
   "specVersion": "1.0.0",
-  "id": "urn:agent:acme:invoice-api",
+  "id": "urn:pactspec:acme:invoice-api",
   "name": "Invoice API",
   "version": "1.2.0",
   "provider": { "name": "Acme" },
@@ -117,29 +117,29 @@ AgentSpec:
 
 ---
 
-## Using `x-` extensions in OpenAPI to pre-populate AgentSpec
+## Using `x-` extensions in OpenAPI to pre-populate PactSpec
 
 Add these extensions to your OpenAPI spec so the conversion is fully automated:
 
 ```yaml
-x-agentspec-pricing:
+x-pactspec-pricing:
   model: per-invocation
   amount: 0.02
   currency: USD
   protocol: stripe
 
-x-agentspec-sla:
+x-pactspec-sla:
   p99LatencyMs: 5000
   uptimeSLA: 0.999
 
-x-agentspec-test-suite:
+x-pactspec-test-suite:
   url: https://acme.ai/tests/extract-line-items.json
   type: http-roundtrip
 ```
 
 ---
 
-## Referencing the OpenAPI spec from AgentSpec
+## Referencing the OpenAPI spec from PactSpec
 
 ```json
 {

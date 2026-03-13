@@ -5,7 +5,7 @@ import type { AgentSpec } from '@/types/agent-spec';
 
 const base: AgentSpec = {
   specVersion: '1.0.0',
-  id: 'urn:agent:acme:alpha',
+  id: 'urn:pactspec:acme:alpha',
   name: 'Alpha',
   version: '1.0.0',
   provider: { name: 'Acme', url: 'https://acme.ai' },
@@ -22,7 +22,7 @@ test('hashSpec is stable across key ordering', () => {
     })),
     provider: { url: 'https://acme.ai', name: 'Acme' },
     endpoint: { url: 'https://api.acme.ai/agent' },
-    id: 'urn:agent:acme:alpha',
+    id: 'urn:pactspec:acme:alpha',
     name: 'Alpha',
     version: '1.0.0',
     specVersion: '1.0.0',
@@ -32,6 +32,6 @@ test('hashSpec is stable across key ordering', () => {
 });
 
 test('hashSpec changes when values change', () => {
-  const changed: AgentSpec = { ...base, id: 'urn:agent:acme:beta' };
+  const changed: AgentSpec = { ...base, id: 'urn:pactspec:acme:beta' };
   assert.notEqual(hashSpec(base), hashSpec(changed));
 });

@@ -1,7 +1,7 @@
 {
   "_comment": "Free pricing model — amount must be 0",
   "specVersion": "1.0.0",
-  "id": "urn:agent:test:free-agent",
+  "id": "urn:pactspec:test:free-agent",
   "name": "Free Agent",
   "version": "1.0.0",
   "provider": { "name": "Test" },

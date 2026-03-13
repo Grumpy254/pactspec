@@ -47,3 +47,4 @@ cli/node_modules/
 cli/dist/
 sdk/node_modules/
 sdk/dist/
+cli/test-source.*

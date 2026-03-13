@@ -5,7 +5,7 @@ import { useState } from 'react';
 const EXAMPLE_SPEC = JSON.stringify(
   {
     specVersion: '1.0.0',
-    id: 'urn:agent:acme:invoice-processor',
+    id: 'urn:pactspec:acme:invoice-processor',
     name: 'Invoice Processor',
     version: '1.0.0',
     description: 'Extracts structured data from PDF invoices using vision AI.',
@@ -106,7 +106,7 @@ export default function PublishPage() {
     <div className="max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold text-white mb-2">Publish Agent</h1>
       <p className="text-gray-400 mb-8">
-        Submit your AgentSpec JSON to register in the public registry.
+        Submit your PactSpec JSON to register in the public registry.
         Your spec must conform to the{' '}
         <a href="/api/spec/v1" target="_blank" className="text-indigo-400 underline">
           v1 schema
@@ -129,7 +129,7 @@ export default function PublishPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            AgentSpec JSON
+            PactSpec JSON
           </label>
           <textarea
             value={specText}

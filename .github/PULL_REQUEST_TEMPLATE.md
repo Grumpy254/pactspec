@@ -22,7 +22,7 @@ If this PR includes a spec change, link the RFC issue here: #
 
 ## Testing
 
-- [ ] Ran `agentspec conformance` — all tests pass
+- [ ] Ran `pactspec conformance` — all tests pass
 - [ ] Ran `npx tsc --noEmit` — no type errors
 - [ ] Tested against local dev server
 

@@ -6,14 +6,14 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AgentSpec — Machine-readable AI Agent Registry',
+  title: 'PactSpec — Machine-readable AI Agent Registry',
   description:
     'Open protocol for AI agent capability declaration with pricing, test suites, and cryptographic attestation.',
   openGraph: {
-    title: 'AgentSpec',
+    title: 'PactSpec',
     description: 'The open standard for declaring AI agent capabilities.',
-    url: 'https://agentspec.dev',
-    siteName: 'AgentSpec',
+    url: 'https://pactspec.dev',
+    siteName: 'PactSpec',
   },
 };
 
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2 font-semibold text-white">
-            <span className="text-indigo-400 font-mono text-xl font-bold tracking-tight">{'<AgentSpec />'}</span>
+            <span className="text-indigo-400 font-mono text-xl font-bold tracking-tight">{'<PactSpec />'}</span>
           </a>
           <nav className="flex items-center gap-6 text-sm text-gray-400">
             <a href="/" className="hover:text-white transition-colors">Registry</a>
@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Schema
             </a>
             <a
-              href="https://github.com/agentspec/agentspec"
+              href="https://github.com/pactspec/pactspec"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="max-w-5xl mx-auto px-6 py-10">{children}</main>
         <footer className="border-t border-gray-800 mt-20 px-6 py-6 text-center text-gray-600 text-sm">
-          AgentSpec v1 &mdash; Open Protocol &mdash;{' '}
+          PactSpec v1 &mdash; Open Protocol &mdash;{' '}
           <a href="/api/spec/v1" className="underline hover:text-gray-400">
             schema/v1.json
           </a>

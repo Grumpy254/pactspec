@@ -1,8 +1,10 @@
 {
-  "name": "@agentspec/cli",
+  "name": "@pactspec/cli",
   "version": "0.1.0",
-  "description": "Official CLI for AgentSpec — init, validate, publish, verify",
-  "bin": { "agentspec": "./dist/index.js" },
+  "description": "Official CLI for PactSpec — init, validate, publish, verify",
+  "bin": {
+    "pactspec": "./dist/index.js"
+  },
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -12,7 +14,8 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "commander": "^12.1.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

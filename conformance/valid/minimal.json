@@ -1,7 +1,7 @@
 {
-  "_comment": "Minimal valid AgentSpec — only required fields",
+  "_comment": "Minimal valid PactSpec — only required fields",
   "specVersion": "1.0.0",
-  "id": "urn:agent:test:minimal",
+  "id": "urn:pactspec:test:minimal",
   "name": "Minimal Agent",
   "version": "1.0.0",
   "provider": { "name": "Test Provider" },

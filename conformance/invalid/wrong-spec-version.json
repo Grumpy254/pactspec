@@ -2,7 +2,7 @@
   "_comment": "Must be rejected: specVersion must be exactly '1.0.0' (const)",
   "_expectedError": "const",
   "specVersion": "2.0.0",
-  "id": "urn:agent:test:wrong-version",
+  "id": "urn:pactspec:test:wrong-version",
   "name": "Wrong Version",
   "version": "1.0.0",
   "provider": { "name": "Test" },
