@@ -1,0 +1,16 @@
+{
+  "_comment": "Must be rejected: missing required 'specVersion'",
+  "_expectedError": "required",
+  "id": "urn:agent:test:no-version",
+  "name": "No Version Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "A skill.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" }
+  }]
+}

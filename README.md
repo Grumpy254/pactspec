@@ -17,9 +17,25 @@ AgentSpec fills the gap between existing transport protocols (MCP, A2A) and a co
 ## Schema
 
 ```
-GET /api/spec/v1        → canonical JSON Schema
-GET /schema/v1.json     → static CDN copy
+GET /api/spec/v1        -> canonical JSON Schema
+GET /schema/v1.json     -> static CDN copy
 ```
+
+## Governance and Policies
+
+1. Governance: `GOVERNANCE.md`
+2. Versioning: `VERSIONING.md`
+3. IP and Patent Policy: `IP_POLICY.md`
+4. RFC Template: `RFC_TEMPLATE.md`
+
+## Interoperability
+
+1. OpenAPI mapping: `interop/openapi.md`
+2. MCP mapping: `interop/mcp.md`
+
+## Conformance
+
+1. Conformance suite: `conformance/README.md`
 
 ## Registry API
 

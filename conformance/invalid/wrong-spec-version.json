@@ -1,0 +1,17 @@
+{
+  "_comment": "Must be rejected: specVersion must be exactly '1.0.0' (const)",
+  "_expectedError": "const",
+  "specVersion": "2.0.0",
+  "id": "urn:agent:test:wrong-version",
+  "name": "Wrong Version",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "A skill.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" }
+  }]
+}

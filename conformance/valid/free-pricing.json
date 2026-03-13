@@ -1,0 +1,17 @@
+{
+  "_comment": "Free pricing model — amount must be 0",
+  "specVersion": "1.0.0",
+  "id": "urn:agent:test:free-agent",
+  "name": "Free Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "free-skill",
+    "name": "Free Skill",
+    "description": "A free skill.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" },
+    "pricing": { "model": "free", "amount": 0, "currency": "USD" }
+  }]
+}

@@ -1,0 +1,11 @@
+{
+  "_comment": "Must be rejected: skills array must have at least 1 item",
+  "_expectedError": "minItems",
+  "specVersion": "1.0.0",
+  "id": "urn:agent:test:no-skills",
+  "name": "No Skills Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": []
+}

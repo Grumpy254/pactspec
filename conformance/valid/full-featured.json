@@ -1,0 +1,61 @@
+{
+  "_comment": "Full-featured AgentSpec — all optional fields populated",
+  "specVersion": "1.0.0",
+  "id": "urn:agent:test:full-featured",
+  "name": "Full Featured Agent",
+  "version": "2.1.0",
+  "description": "A full-featured agent for conformance testing.",
+  "provider": {
+    "name": "Test Provider",
+    "url": "https://test.example",
+    "did": "did:web:test.example",
+    "contact": "support@test.example"
+  },
+  "endpoint": {
+    "url": "https://api.test.example/agent",
+    "auth": { "type": "bearer" }
+  },
+  "skills": [{
+    "id": "full-skill",
+    "name": "Full Skill",
+    "description": "A skill with all optional fields.",
+    "tags": ["test", "conformance"],
+    "inputSchema": {
+      "type": "object",
+      "required": ["query"],
+      "properties": { "query": { "type": "string" } }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["result"],
+      "properties": { "result": { "type": "string" } }
+    },
+    "examples": [{
+      "description": "Basic example",
+      "input": { "query": "hello" },
+      "expectedOutput": { "result": "world" }
+    }],
+    "pricing": {
+      "model": "per-invocation",
+      "amount": 0.01,
+      "currency": "USD",
+      "protocol": "stripe"
+    },
+    "sla": {
+      "p50LatencyMs": 200,
+      "p99LatencyMs": 1000,
+      "uptimeSLA": 0.999,
+      "maxConcurrency": 100
+    },
+    "testSuite": {
+      "url": "https://test.example/tests/full-skill.json",
+      "type": "http-roundtrip"
+    }
+  }],
+  "tags": ["test", "conformance"],
+  "license": "MIT",
+  "links": {
+    "documentation": "https://test.example/docs",
+    "repository": "https://github.com/test/agent"
+  }
+}

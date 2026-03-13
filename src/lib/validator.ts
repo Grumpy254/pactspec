@@ -41,7 +41,7 @@ function isPrivateIpv4(addr: string): boolean {
   return (
     inRange(0x0a000000, 0x0affffff) || // 10.0.0.0/8
     inRange(0x7f000000, 0x7fffffff) || // 127.0.0.0/8
-    inRange(0x0a9fe000, 0x0a9fffff) || // 169.254.0.0/16
+    inRange(0xa9fe0000, 0xa9feffff) || // 169.254.0.0/16
     inRange(0xac100000, 0xac1fffff) || // 172.16.0.0/12
     inRange(0xc0a80000, 0xc0a8ffff) || // 192.168.0.0/16
     inRange(0x64400000, 0x647fffff) || // 100.64.0.0/10

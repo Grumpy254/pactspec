@@ -1,0 +1,18 @@
+{
+  "_comment": "Must be rejected: pricing currency must be USD, USDC, or SOL",
+  "_expectedError": "enum",
+  "specVersion": "1.0.0",
+  "id": "urn:agent:test:bad-currency",
+  "name": "Bad Currency",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "A skill.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" },
+    "pricing": { "model": "per-invocation", "amount": 0.01, "currency": "EUR" }
+  }]
+}
