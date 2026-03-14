@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "description": "Official CLI for PactSpec — init, validate, publish, verify",
   "bin": {
-    "pactspec": "./dist/index.js"
+    "pactspec": "dist/index.js"
   },
   "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts"
