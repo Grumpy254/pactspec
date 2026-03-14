@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "pactspec"
+version = "0.1.0"
+description = "Official Python SDK for PactSpec — validate, publish, and verify AI agent capability specs"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+keywords = ["pactspec", "ai-agents", "sdk", "registry", "attestation"]
+dependencies = [
+    "jsonschema>=4.0.0",
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+Homepage = "https://pactspec.dev"
+Repository = "https://github.com/Grumpy254/pactspec"
+Documentation = "https://pactspec.dev/docs"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pactspec*"]
+
+[tool.setuptools.package-data]
+pactspec = ["schema.json"]

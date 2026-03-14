@@ -30,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav className="flex items-center gap-6 text-sm text-gray-400">
             <a href="/" className="hover:text-white transition-colors">Registry</a>
             <a href="/publish" className="hover:text-white transition-colors">Publish</a>
+            <a href="/why" className="hover:text-white transition-colors">Why</a>
             <a href="/api/spec/v1" target="_blank" className="hover:text-white transition-colors">
               Schema
             </a>
