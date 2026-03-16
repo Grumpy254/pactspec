@@ -115,11 +115,19 @@ attestation_hash = SHA256(
 ```
 
 The hash is stored in the `agents` table and returned in API responses.
-It is NOT a signature — it is a tamper-evident fingerprint bound to a specific
-agent, skill, result set, and point in time.
 
-**Planned (v1.1):** Optional Ed25519 signature over the attestation payload,
-signed by a registry keypair, so third parties can verify without trusting the registry database.
+**What this is:**
+- A tamper-evident fingerprint bound to a specific agent, skill, result set, and point in time.
+- If any of those four inputs change, the hash changes — so a modified record is detectable by recomputing the hash from its components.
+- The hash is stored by the PactSpec registry, a centralized service. Trust in the record depends on trust in the registry database (Supabase with RLS; only the service role can write attestation data).
+
+**What this is NOT:**
+- It is NOT a cryptographic signature. There is no private key, no PKI, no chain of trust.
+- A third party cannot verify that "PactSpec ran these tests" without trusting the registry database — they can only verify that the stored hash matches the stored inputs.
+- It does not prove the test suite is comprehensive or adversarial.
+- SLA fields (`p99LatencyMs`, `uptimeSLA`) are self-declared metadata in the spec — they are not monitored or enforced by the registry.
+
+**Planned (v1.1):** Ed25519 signature over the attestation payload, signed by a registry keypair. Third parties will be able to verify attestations using the registry's public key, without trusting the database. This makes attestations portable and independently verifiable.
 
 ---
 

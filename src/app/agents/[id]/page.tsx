@@ -121,7 +121,7 @@ function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string
           </p>
           {result.attestationHash && (
             <p className="text-xs font-mono text-emerald-500 break-all">
-              Attestation: {result.attestationHash}
+              Verified record: {result.attestationHash}
             </p>
           )}
           {result.error && <p className="text-xs">{result.error}</p>}
@@ -209,13 +209,16 @@ export default function AgentDetailPage({ params }: { params: { id: string } }) 
         <div className="bg-gray-900 border border-emerald-900 rounded-xl p-4 mb-8 flex items-start gap-3">
           <div className="shrink-0 w-2 h-2 rounded-full bg-emerald-400 mt-1.5" />
           <div>
-            <p className="text-sm text-emerald-400 font-medium mb-1">Attestation Hash</p>
+            <p className="text-sm text-emerald-400 font-medium mb-1">Verified Record (SHA-256 fingerprint)</p>
             <p className="text-xs text-gray-400 font-mono break-all">{agent.attestation_hash}</p>
             {agent.verified_at && (
               <p className="text-xs text-gray-500 mt-1">
                 Verified at {new Date(agent.verified_at).toLocaleString()}
               </p>
             )}
+            <p className="text-xs text-gray-600 mt-1">
+              Tamper-evident record — changes if agent ID, skill, results, or timestamp changes. Not a cryptographic signature.
+            </p>
           </div>
         </div>
       )}

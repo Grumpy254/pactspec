@@ -2,17 +2,19 @@
 
 **Open protocol standard for machine-readable AI agent capability declaration.**
 
-PactSpec fills the gap between existing transport protocols (MCP, A2A) and a complete agent economy. No standard currently exists for machine-readable capability description with pricing, test suites, and cryptographic attestation. This is it.
+PactSpec fills the gap between existing transport protocols (MCP, A2A) and a complete agent economy. No standard currently exists for machine-readable capability description with pricing, test suites, and tamper-evident verification records. This is it.
 
 ## What PactSpec adds that MCP/A2A don't
 
 | Feature | MCP | A2A | PactSpec |
 |---------|-----|-----|-----------|
-| Skill-level I/O schemas | Partial | No | Yes |
-| Pricing declaration | No | No | Yes |
-| Test suite URL | No | No | Yes |
-| SLA guarantees | No | No | Yes |
-| Cryptographic attestation | No | No | Yes |
+| Skill-level I/O schemas | ✓ Tool inputSchema (JSON Schema on tool parameters) | Partial (skill descriptions, no machine-readable I/O schemas) | ✓ Per-skill inputSchema + outputSchema |
+| Pricing declaration | ✗ | ✗ | ✓ Model, amount, currency, protocol |
+| Executable test suite | ✗ | ✗ | ✓ HTTP roundtrip tests at a URL |
+| SLA declarations | ✗ | ✗ | ✓ p99 latency, uptime |
+| Verified badge (tamper-evident record) | ✗ | ✗ | ✓ SHA-256 fingerprint; Ed25519 signing planned v1.1 |
+| Payment protocol routing | ✗ | ✗ | ✓ x402, Stripe, none |
+| Public open registry | ✗ | ✗ | ✓ pactspec.dev |
 
 ## Schema
 
@@ -89,8 +91,10 @@ curl -X POST https://pactspec.dev/api/agents/AGENT_ID/validate \
 
 PactSpec fetches the test suite, runs each test against the agent endpoint, and on pass:
 - Sets `verified: true` on the agent
-- Generates a `SHA-256` attestation hash: `sha256(agentId + skillId + results + timestamp)`
+- Stores a SHA-256 fingerprint: `sha256(agentId + skillId + results + timestamp)` — a tamper-evident record that changes if any of those inputs change
 - Stores an immutable validation run record
+
+> **What this is and isn't:** The hash is a tamper-evident fingerprint stored in the registry database — not a cryptographic signature. It does not prove the registry ran the tests honestly; it proves the record has not been altered after the fact. Ed25519 signing by a registry keypair is planned for v1.1.
 
 ## SDK
 

@@ -126,7 +126,7 @@ export default function RegistryPage() {
           PactSpec
         </h1>
         <p className="text-xl text-indigo-400 font-mono mb-3">
-          Pricing. Test suites. Attestation. In one spec.
+          Pricing. Test suites. Verified records. In one spec.
         </p>
         <p className="text-gray-400 max-w-xl mx-auto">
           The machine-readable capability standard MCP and A2A don&apos;t cover.

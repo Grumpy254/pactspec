@@ -91,13 +91,61 @@ export default function WhyPage() {
               <CompareRow feature="Input / output schemas" openapi="✓ Request/response" mcp="✓ Tool inputSchema" pactspec="✓ Per-skill" />
               <CompareRow feature="Pricing metadata" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ Model, amount, currency, protocol" />
               <CompareRow feature="Executable test suite" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ HTTP roundtrip tests at a URL" />
-              <CompareRow feature="Cryptographic attestation" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ SHA-256 hash bound to agent + results" />
+              <CompareRow feature="Verified record (SHA-256 fingerprint)" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ Tamper-evident record; Ed25519 signing planned v1.1" />
               <CompareRow feature="SLA declarations" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ p99 latency, uptime guarantee" />
               <CompareRow feature="Public registry" openapi="~ Swagger Hub (commercial)" mcp="✗ No standard registry" pactspec="✓ Open registry at pactspec.dev" />
               <CompareRow feature="Machine-readable discovery" openapi="~ Via OpenAPI portals" mcp="✗ Not supported" pactspec="✓ /api/agents.md for agent consumers" />
               <CompareRow feature="Payment protocol routing" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ x402, Stripe, none" />
             </tbody>
           </table>
+        </div>
+      </Section>
+
+      {/* What verification proves — and doesn't */}
+      <Section title="What a verified badge means — and doesn't">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-gray-900 border border-emerald-900/50 rounded-xl p-6">
+            <p className="text-emerald-400 font-semibold text-sm mb-4">What it means</p>
+            <ul className="space-y-3 text-sm text-gray-300">
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                The registry fetched the agent&apos;s published test suite
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                The agent&apos;s endpoint passed every test in that suite at the time of verification
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                The result is stored as a SHA-256 fingerprint that changes if the agent ID, skill, results, or timestamp changes
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                The spec has not been modified since verification — spec hash is checked on every update
+              </li>
+            </ul>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <p className="text-gray-400 font-semibold text-sm mb-4">What it does not mean</p>
+            <ul className="space-y-3 text-sm text-gray-400">
+              <li className="flex gap-2">
+                <span className="text-gray-600 shrink-0">✗</span>
+                It does not prove the test suite is comprehensive or adversarial
+              </li>
+              <li className="flex gap-2">
+                <span className="text-gray-600 shrink-0">✗</span>
+                It does not prove the agent will perform the same way tomorrow
+              </li>
+              <li className="flex gap-2">
+                <span className="text-gray-600 shrink-0">✗</span>
+                It is not a cryptographic signature — the registry is a trusted third party, not a trustless proof system. Ed25519 signing is planned for v1.1.
+              </li>
+              <li className="flex gap-2">
+                <span className="text-gray-600 shrink-0">✗</span>
+                SLA declarations (p99 latency, uptime) are self-declared metadata — they are not monitored or enforced by the registry
+              </li>
+            </ul>
+          </div>
         </div>
       </Section>
 
@@ -121,7 +169,7 @@ pactspec publish pactspec.json --agent-id my-agent@acme.com`} />
             <p className="text-indigo-400 font-mono text-sm mb-2">&ldquo;MCP already does this&rdquo;</p>
             <p className="text-gray-300 text-sm leading-relaxed mb-3">
               MCP solves tool invocation between a model and a server at runtime. It has no pricing, no test suites,
-              no SLAs, no attestation, and no registry. PactSpec is the layer that makes an agent
+              no SLAs, no verified records, and no registry. PactSpec is the layer that makes an agent
               <em> discoverable and trustworthy before</em> it is ever invoked — the capability declaration
               that sits above the transport layer.
             </p>
@@ -133,9 +181,9 @@ pactspec publish pactspec.json --agent-id my-agent@acme.com`} />
             <p className="text-indigo-400 font-mono text-sm mb-2">&ldquo;Why would I publish my agent here?&rdquo;</p>
             <p className="text-gray-300 text-sm leading-relaxed">
               The verified badge is a trust signal other registries don&apos;t offer. When your agent passes its
-              own test suite, the registry issues a cryptographic attestation hash bound to your agent ID,
-              skill, results, and timestamp. That hash is permanent proof — visible to every consumer
-              who finds you in the registry — that your agent did what it claims, at that point in time.
+              own test suite, the registry records a SHA-256 fingerprint bound to your agent ID,
+              skill, results, and timestamp. That record is permanent and tamper-evident — visible to every consumer
+              who finds you in the registry — confirming your agent passed its declared tests at that point in time.
             </p>
           </div>
         </div>

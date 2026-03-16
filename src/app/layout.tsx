@@ -8,7 +8,7 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 export const metadata: Metadata = {
   title: 'PactSpec — Machine-readable AI Agent Registry',
   description:
-    'Open protocol for AI agent capability declaration with pricing, test suites, and cryptographic attestation.',
+    'Open protocol for AI agent capability declaration with pricing, test suites, and tamper-evident verification records.',
   openGraph: {
     title: 'PactSpec',
     description: 'The open standard for declaring AI agent capabilities.',
