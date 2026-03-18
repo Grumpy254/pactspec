@@ -105,9 +105,32 @@ npm install @pactspec/sdk
 
 ```bash
 npm install -g @pactspec/cli
+pactspec init          # scaffold a spec interactively
 pactspec validate my-agent.json
-pactspec publish my-agent.json --agent-id my-org
+pactspec test my-agent.json --skill <skill-id>
+pactspec publish my-agent.json
+pactspec verify <agent-id> <skill-id>
 ```
+
+## Claude Code Integration
+
+Two slash commands are included for publishing PactSpecs without leaving your editor.
+
+Copy them into any project:
+
+```bash
+mkdir -p .claude/commands
+curl -O https://pactspec.dev/claude/pactspec-init.md
+curl -O https://pactspec.dev/claude/pactspec-publish.md
+mv pactspec-*.md .claude/commands/
+```
+
+Or just copy from this repo's `.claude/commands/` folder.
+
+Then in Claude Code:
+
+- `/pactspec-init src/routes/my-agent.ts` — reads your route file, generates a `.pactspec.json`
+- `/pactspec-publish agents/my-agent.pactspec.json` — validates, tests, publishes, and requests verification
 
 ## Stack
 
