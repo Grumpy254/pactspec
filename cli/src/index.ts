@@ -113,10 +113,13 @@ program
       process.exit(1);
     }
 
-    const data = await res.json() as { agent?: { id: string }; error?: string; errors?: string[] };
+    const text = await res.text();
+    let data: { agent?: { id: string; spec_id?: string }; error?: string; errors?: string[] } = {};
+    try { data = JSON.parse(text); } catch { /* non-JSON response */ }
 
     if (res.ok && data.agent) {
-      console.log(pc.green(`✓ Published: ${data.agent.id}`));
+      const displayId = data.agent.spec_id ?? data.agent.id;
+      console.log(pc.green(`✓ Published: ${displayId}`));
       console.log(pc.dim(`  ${opts.registry}/agents/${data.agent.id}`));
     } else {
       console.error(pc.red(`✗ Publish failed: ${data.error ?? 'Unknown error'}`));
