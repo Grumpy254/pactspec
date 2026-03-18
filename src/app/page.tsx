@@ -6,7 +6,6 @@ import type { AgentRow } from '@/types/agent-spec';
 function AgentCard({ agent }: { agent: AgentRow }) {
   const skills = agent.spec?.skills ?? [];
   const pricingSkill = skills.find((s) => s.pricing);
-  const slaSkill = skills.find((s) => s.sla?.p99LatencyMs != null || s.sla?.uptimeSLA != null);
   const hasPaidPricing = pricingSkill?.pricing && pricingSkill.pricing.model !== 'free';
 
   return (
@@ -24,11 +23,6 @@ function AgentCard({ agent }: { agent: AgentRow }) {
             {agent.verified && (
               <span className="shrink-0 inline-flex items-center gap-1 bg-emerald-900/50 text-emerald-400 text-xs px-2 py-0.5 rounded-full border border-emerald-800">
                 Verified
-              </span>
-            )}
-            {slaSkill && (
-              <span className="shrink-0 inline-flex items-center bg-blue-900/40 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-800/50">
-                SLA
               </span>
             )}
             {hasPaidPricing && pricingSkill?.pricing?.protocol && pricingSkill.pricing.protocol !== 'none' && (
@@ -62,18 +56,13 @@ function AgentCard({ agent }: { agent: AgentRow }) {
             <span key={tag} className="bg-gray-800/60 px-2 py-0.5 rounded">{tag}</span>
           ))}
         </div>
-        <div className="flex items-center gap-3">
-          {slaSkill?.sla?.p99LatencyMs != null && (
-            <span className="text-blue-500 font-mono">p99 {slaSkill.sla.p99LatencyMs}ms</span>
-          )}
-          {pricingSkill?.pricing && (
-            <span className="font-mono text-indigo-400">
-              {pricingSkill.pricing.model === 'free'
-                ? 'Free'
-                : `${pricingSkill.pricing.amount} ${pricingSkill.pricing.currency}/${pricingSkill.pricing.model}`}
-            </span>
-          )}
-        </div>
+        {pricingSkill?.pricing && (
+          <span className="font-mono text-indigo-400">
+            {pricingSkill.pricing.model === 'free'
+              ? 'Free'
+              : `${pricingSkill.pricing.amount} ${pricingSkill.pricing.currency}/${pricingSkill.pricing.model}`}
+          </span>
+        )}
       </div>
     </a>
   );
@@ -97,7 +86,6 @@ export default function RegistryPage() {
       const res = await fetch(`/api/agents?${params}`);
       if (!res.ok) throw new Error(`Registry returned ${res.status}`);
       const data = await res.json();
-      // Verified agents float to top; within each group preserve server order
       const sorted = [...(data.agents ?? [])].sort(
         (a: AgentRow, b: AgentRow) => Number(b.verified) - Number(a.verified)
       );
@@ -118,49 +106,90 @@ export default function RegistryPage() {
   return (
     <div>
       {/* Hero */}
-      <div className="text-center mb-12 pt-8">
+      <div className="text-center mb-14 pt-8">
         <div className="inline-flex items-center gap-2 bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs px-3 py-1 rounded-full mb-6">
-          Open Protocol Standard
+          Open Protocol · v1.0.0
         </div>
-        <h1 className="text-6xl font-bold text-white mb-4 tracking-tight">
-          PactSpec
+        <h1 className="text-5xl sm:text-6xl font-bold text-white mb-5 tracking-tight leading-tight">
+          MCP connects agents.<br />
+          <span className="text-indigo-400">PactSpec makes them trustworthy.</span>
         </h1>
-        <p className="text-xl text-indigo-400 font-mono mb-3">
-          Pricing. Test suites. Verified records. In one spec.
+        <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-8">
+          Before your orchestrator invokes an agent, it needs to know the agent works, what it costs,
+          and who&apos;s accountable. PactSpec is the open standard for declaring, verifying, and
+          discovering AI agent capabilities — the layer MCP and A2A don&apos;t cover.
         </p>
-        <p className="text-gray-400 max-w-xl mx-auto">
-          The machine-readable capability standard MCP and A2A don&apos;t cover.
-          Discover, verify, and transact with AI agents.
-        </p>
-        <div className="flex justify-center gap-4 mt-6">
+        <div className="flex justify-center gap-3 flex-wrap">
           <a
-            href="/publish"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+            href="/why"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
           >
-            Publish Agent
+            Why PactSpec?
           </a>
           <a
-            href="/api/spec/v1"
-            target="_blank"
-            className="border border-gray-700 hover:border-gray-500 text-gray-300 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+            href="/publish"
+            className="border border-gray-700 hover:border-gray-500 text-gray-300 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
           >
-            View Schema
+            Publish your agent
+          </a>
+          <a
+            href="/api/agents.md"
+            target="_blank"
+            className="border border-gray-700 hover:border-gray-500 text-gray-300 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors font-mono text-xs"
+          >
+            GET /api/agents.md
           </a>
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[
-          { label: 'Registered Agents', value: total },
-          { label: 'Schema Version', value: 'v1.0.0' },
-          { label: 'Protocol', value: 'Open' },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-gray-900 border border-gray-800 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-white">{stat.value}</div>
-            <div className="text-xs text-gray-500 mt-1">{stat.label}</div>
+      {/* Three audiences */}
+      <div className="grid md:grid-cols-3 gap-4 mb-14">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="text-indigo-400 text-sm font-semibold mb-2 uppercase tracking-wide">For agent builders</div>
+          <p className="text-gray-300 text-sm leading-relaxed mb-4">
+            Publish a machine-readable spec in minutes. Declare your pricing, run your test suite, and earn a verified badge that any consumer can check.
+          </p>
+          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400">
+            <span className="text-gray-600">$</span> pactspec publish pactspec.json<br />
+            <span className="text-emerald-400">✓</span> Published · <span className="text-gray-500">pactspec.dev/agents/...</span>
           </div>
-        ))}
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="text-violet-400 text-sm font-semibold mb-2 uppercase tracking-wide">For orchestrators</div>
+          <p className="text-gray-300 text-sm leading-relaxed mb-4">
+            Query the registry programmatically. Select the cheapest verified agent that handles your task. No hardcoding, no manual vetting.
+          </p>
+          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400 leading-relaxed">
+            <span className="text-blue-400">const</span> {`{ agents } =`} <span className="text-yellow-400">await</span> search{'({'}<br />
+            {'  '}<span className="text-gray-300">verifiedOnly</span>: <span className="text-orange-400">true</span>, q: <span className="text-green-400">&quot;invoice&quot;</span><br />
+            {'}'});
+          </div>
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="text-emerald-400 text-sm font-semibold mb-2 uppercase tracking-wide">For MCP users</div>
+          <p className="text-gray-300 text-sm leading-relaxed mb-4">
+            Already on MCP? Add three lines to your tool manifest. Your tools gain pricing, a verified badge, and registry discoverability with zero migration.
+          </p>
+          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400 leading-relaxed">
+            <span className="text-gray-600">{'"x-pactspec"'}: {'{'}</span><br />
+            {'  '}<span className="text-gray-300">&quot;registry&quot;</span>: <span className="text-green-400">&quot;pactspec.dev/...&quot;</span>,<br />
+            {'  '}<span className="text-gray-300">&quot;verified&quot;</span>: <span className="text-orange-400">true</span><br />
+            <span className="text-gray-600">{'}'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Registry */}
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-semibold text-white">
+          Registry
+          {total > 0 && <span className="ml-2 text-sm text-gray-500 font-normal">{total} agents</span>}
+        </h2>
+        <a href="/api/agents.md" target="_blank" className="text-xs text-gray-500 hover:text-gray-300 font-mono transition-colors">
+          machine-readable ↗
+        </a>
       </div>
 
       {/* Search + filters */}
@@ -190,8 +219,10 @@ export default function RegistryPage() {
         <div className="text-center text-red-400 py-20">{fetchError}</div>
       ) : agents.length === 0 ? (
         <div className="text-center text-gray-500 py-20">
-          <p className="mb-4">No agents found.</p>
-          <a href="/publish" className="text-indigo-400 underline">Publish the first one</a>
+          <p className="mb-2">No agents yet.</p>
+          <a href="/publish" className="text-indigo-400 underline text-sm">
+            Publish the first one &rarr;
+          </a>
         </div>
       ) : (
         <div className="grid gap-4">

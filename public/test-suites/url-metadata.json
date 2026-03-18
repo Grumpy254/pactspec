@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "skill": "extract-metadata",
+  "tests": [
+    {
+      "id": "extract-github-metadata",
+      "description": "Extracts title and description from github.com",
+      "request": {
+        "method": "POST",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "url": "https://github.com" }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["title", "description", "favicon"],
+          "properties": {
+            "title":       { "type": "string", "minLength": 1 },
+            "description": { "type": "string" },
+            "favicon":     { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "timeoutMs": 12000
+    },
+    {
+      "id": "invalid-url-rejected",
+      "description": "A non-URL string returns 400",
+      "request": {
+        "method": "POST",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "url": "not-a-url" }
+      },
+      "expect": {
+        "status": 400
+      }
+    }
+  ]
+}

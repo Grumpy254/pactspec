@@ -41,8 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env.local
-cli/node_modules/ echo cli/dist/ git rm -r --cached cli/node_modules cli/dist
-cli/node_modules/ echo cli/dist/ git rm -r --cached cli/node_modules cli/dist
 cli/node_modules/
 cli/dist/
 sdk/node_modules/

@@ -10,7 +10,7 @@ from .client import (
     AgentRecord,
     SearchResult,
 )
-from .types import PactSpec, PactSpecSkill, PactSpecPricing, PactSpecSLA
+from .types import PactSpec, PactSpecSkill, PactSpecPricing
 
 __version__ = "0.1.0"
 __all__ = [
@@ -28,5 +28,4 @@ __all__ = [
     "PactSpec",
     "PactSpecSkill",
     "PactSpecPricing",
-    "PactSpecSLA",
 ]

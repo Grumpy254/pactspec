@@ -1,0 +1,75 @@
+{
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:pactspec:url-metadata",
+  "name": "URL Metadata Extractor",
+  "version": "1.0.0",
+  "description": "Extracts title, description, and favicon from any public URL by reading its HTML head. Useful for link previews, content enrichment, and web scraping pipelines.",
+  "provider": {
+    "name": "PactSpec",
+    "url": "https://pactspec.dev",
+    "contact": "hello@pactspec.dev"
+  },
+  "endpoint": {
+    "url": "https://pactspec.dev/api/demo/url-metadata",
+    "auth": { "type": "none" }
+  },
+  "skills": [
+    {
+      "id": "extract-metadata",
+      "name": "Extract URL Metadata",
+      "description": "Fetches a URL and extracts its Open Graph title, meta description, and favicon. Only reads the first 64KB of HTML — fast and lightweight. HTTPS and HTTP URLs only.",
+      "tags": ["web", "metadata", "scraping", "og", "utility"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The URL to extract metadata from. Must be publicly accessible."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["title", "description", "favicon"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Page title (og:title preferred, falls back to <title>)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Page description (og:description preferred, falls back to meta description)"
+          },
+          "favicon": {
+            "type": "string",
+            "description": "Absolute URL to the site favicon"
+          }
+        }
+      },
+      "pricing": {
+        "model": "free",
+        "amount": 0,
+        "currency": "USD"
+      },
+      "testSuite": {
+        "url": "https://pactspec.dev/test-suites/url-metadata.json",
+        "type": "http-roundtrip"
+      },
+      "examples": [
+        {
+          "description": "Extract metadata from a website",
+          "input": { "url": "https://github.com" },
+          "expectedOutput": {
+            "title": "GitHub: Let's build from here",
+            "description": "GitHub is where over 100 million developers shape the future of software, together.",
+            "favicon": "https://github.com/favicon.ico"
+          }
+        }
+      ]
+    }
+  ],
+  "tags": ["web", "metadata", "utility", "scraping"],
+  "license": "MIT"
+}

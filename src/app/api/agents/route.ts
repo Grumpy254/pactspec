@@ -95,7 +95,6 @@ export async function POST(req: NextRequest) {
     description: spec.description ?? null,
     provider_name: spec.provider.name,
     provider_url: spec.provider.url ?? null,
-    provider_did: spec.provider.did ?? null,
     endpoint_url: spec.endpoint.url,
     spec: spec,
     tags: spec.tags ?? [],
@@ -135,8 +134,6 @@ export async function POST(req: NextRequest) {
       pricing_currency: skill.pricing?.currency ?? null,
       pricing_protocol: skill.pricing?.protocol ?? null,
       test_suite_url: skill.testSuite?.url ?? null,
-      sla_p99_ms: skill.sla?.p99LatencyMs ?? null,
-      sla_uptime: skill.sla?.uptimeSLA ?? null,
     }));
 
     const { error: upsertError } = await supabase

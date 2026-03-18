@@ -65,14 +65,63 @@ export default function WhyPage() {
           Why PactSpec?
         </div>
         <h1 className="text-4xl font-bold text-white mb-4 leading-tight">
-          The gap OpenAPI, MCP, and A2A don&apos;t fill
+          MCP is the dial tone.<br />PactSpec is the phone book.
         </h1>
         <p className="text-lg text-gray-400 leading-relaxed">
-          Every major agent protocol solves one piece of the puzzle.
-          None of them answers the questions an agent consumer actually needs:
-          <span className="text-white"> what can this agent do, what does it cost, can I trust it, and how do I know it works?</span>
+          MCP solves how agents get called. Nobody solved how agents get chosen —
+          which one works, what it costs, who is accountable when it fails.
+          That is the gap PactSpec fills.
         </p>
       </div>
+
+      {/* The problem — orchestrator perspective */}
+      <Section title="The problem every orchestrator will hit">
+        <div className="space-y-6 text-sm text-gray-300 leading-relaxed">
+          <p>
+            When there are ten invoice-processing agents in the ecosystem, a developer can evaluate them manually.
+            When there are a thousand, that stops working. Orchestrators need to select agents programmatically —
+            and right now, there is no standard way to compare them.
+          </p>
+          <p>
+            MCP tells your orchestrator <em>how</em> to invoke a tool. It says nothing about which tool to trust,
+            what it will cost before you commit, or whether it passed any kind of verification.
+            The result: orchestrators hardcode specific vendors, enterprises manually vet every agent they approve,
+            and the &quot;agent economy&quot; stays fragmented.
+          </p>
+          <p>
+            PactSpec is the standard that makes automated agent selection possible.
+          </p>
+        </div>
+
+        <div className="mt-8 grid md:grid-cols-2 gap-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Without PactSpec</p>
+            <CodeBlock lang="js" code={`// Hardcoded — one vendor, no comparison
+const res = await fetch(
+  'https://api.vendor-a.com/invoice',
+  { method: 'POST', body: ... }
+);
+// No idea what this costs until billed.
+// No idea if it was verified.
+// Cannot switch vendors without rewriting.`} />
+          </div>
+          <div className="bg-gray-900 border border-indigo-900/50 rounded-xl p-5">
+            <p className="text-xs text-indigo-400 uppercase tracking-wide mb-3">With PactSpec</p>
+            <CodeBlock lang="js" code={`import { search } from '@pactspec/sdk';
+
+const { agents } = await search({
+  q: 'invoice',
+  verifiedOnly: true,
+});
+
+// agents[0].spec.skills[0].pricing
+// → { model: 'per-invocation',
+//     amount: 0.02, currency: 'USD' }
+// agents[0].verified → true
+// Switch vendors by changing one filter.`} />
+          </div>
+        </div>
+      </Section>
 
       {/* Comparison table */}
       <Section title="How the standards compare">
@@ -92,7 +141,6 @@ export default function WhyPage() {
               <CompareRow feature="Pricing metadata" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ Model, amount, currency, protocol" />
               <CompareRow feature="Executable test suite" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ HTTP roundtrip tests at a URL" />
               <CompareRow feature="Verified record (SHA-256 fingerprint)" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ Tamper-evident record; Ed25519 signing planned v1.1" />
-              <CompareRow feature="SLA declarations" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ p99 latency, uptime guarantee" />
               <CompareRow feature="Public registry" openapi="~ Swagger Hub (commercial)" mcp="✗ No standard registry" pactspec="✓ Open registry at pactspec.dev" />
               <CompareRow feature="Machine-readable discovery" openapi="~ Via OpenAPI portals" mcp="✗ Not supported" pactspec="✓ /api/agents.md for agent consumers" />
               <CompareRow feature="Payment protocol routing" openapi="✗ Not supported" mcp="✗ Not supported" pactspec="✓ x402, Stripe, none" />
@@ -142,7 +190,7 @@ export default function WhyPage() {
               </li>
               <li className="flex gap-2">
                 <span className="text-gray-600 shrink-0">✗</span>
-                SLA declarations (p99 latency, uptime) are self-declared metadata — they are not monitored or enforced by the registry
+                Pricing amounts are self-declared metadata — not monitored or enforced by the registry
               </li>
             </ul>
           </div>
@@ -156,7 +204,7 @@ export default function WhyPage() {
             <p className="text-indigo-400 font-mono text-sm mb-2">&ldquo;We already have OpenAPI&rdquo;</p>
             <p className="text-gray-300 text-sm leading-relaxed mb-3">
               OpenAPI describes your HTTP surface. PactSpec declares your agent&apos;s <em>capabilities</em> — skills with
-              typed inputs and outputs, pricing, SLAs, and a test suite anyone can run to verify your claims.
+              typed inputs and outputs, pricing, and a test suite anyone can run to verify your claims.
               They&apos;re complementary: convert your OpenAPI to PactSpec in one command and gain the registry,
               attestation, and discovery layer on top.
             </p>
@@ -169,7 +217,7 @@ pactspec publish pactspec.json --agent-id my-agent@acme.com`} />
             <p className="text-indigo-400 font-mono text-sm mb-2">&ldquo;MCP already does this&rdquo;</p>
             <p className="text-gray-300 text-sm leading-relaxed mb-3">
               MCP solves tool invocation between a model and a server at runtime. It has no pricing, no test suites,
-              no SLAs, no verified records, and no registry. PactSpec is the layer that makes an agent
+              no verified records, and no registry. PactSpec is the layer that makes an agent
               <em> discoverable and trustworthy before</em> it is ever invoked — the capability declaration
               that sits above the transport layer.
             </p>
@@ -233,7 +281,6 @@ pactspec publish pactspec.json --agent-id my-agent@acme.com`} />
         "currency": "USD",
         "protocol": "stripe"
       },
-      "sla": { "p99LatencyMs": 3000, "uptimeSLA": 0.999 },
       "testSuite": {
         "url": "https://acme.com/tests/extract-line-items.json"
       }
@@ -241,6 +288,78 @@ pactspec publish pactspec.json --agent-id my-agent@acme.com`} />
   ],
   "tags": ["finance", "document-processing"]
 }`} />
+      </Section>
+
+      {/* MCP bridge */}
+      <Section title="Already on MCP? Three lines.">
+        <p className="text-gray-400 text-sm leading-relaxed mb-6">
+          PactSpec is not a replacement for MCP. MCP handles invocation. PactSpec handles trust and
+          discovery. If you already have an MCP server, you can publish a PactSpec and add an{' '}
+          <code className="text-indigo-400 text-xs bg-gray-800 px-1 py-0.5 rounded">x-pactspec</code>{' '}
+          extension to your existing tool manifest — no migration, no changes to your server.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-gray-500 mb-2">Your MCP tool manifest (unchanged)</p>
+            <CodeBlock code={`{
+  "name": "invoice-processor",
+  "description": "Extracts line items",
+  "inputSchema": { ... },
+  "x-pactspec": {
+    "registry": "https://pactspec.dev/api/agents/urn:pactspec:acme:invoice-processor",
+    "verified": true
+  }
+}`} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-2">What consumers gain</p>
+            <ul className="space-y-3 text-sm text-gray-300">
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                Pricing declaration visible before invocation
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                Verified badge — passed its own test suite
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                Discoverable in the registry without changing your MCP server
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-400 shrink-0">✓</span>
+                Output schema — the one thing MCP doesn&apos;t define
+              </li>
+            </ul>
+          </div>
+        </div>
+        <p className="text-xs text-gray-600 mt-4">
+          Full MCP integration guide: <a href="/interop/mcp" className="underline hover:text-gray-400">interop/mcp</a>
+        </p>
+      </Section>
+
+      {/* Machine-readable discovery */}
+      <Section title="The endpoint orchestrators actually read">
+        <p className="text-gray-400 text-sm leading-relaxed mb-4">
+          Every registered agent is available at a single machine-readable endpoint. An orchestrator
+          can fetch this once and make informed routing decisions without any hardcoding.
+        </p>
+        <CodeBlock lang="bash" code={`GET https://pactspec.dev/api/agents.md
+
+# PactSpec Registry
+> schema: https://pactspec.dev/schema/v1.json
+> updated: 2025-01-15T10:00:00Z
+> total: 42
+
+## Invoice Processor v1.2.0
+id: urn:pactspec:acme:invoice-processor
+endpoint: https://api.acme.com/agent
+verified: YES (2025-01-14T09:00:00Z)
+skills: extract-line-items, classify-document
+pricing: 0.01 USD/per-invocation via stripe`} />
+        <p className="text-xs text-gray-500 mt-3">
+          Also available as JSON: <code className="text-gray-400">GET /api/agents?verified=true&amp;tags=invoice</code>
+        </p>
       </Section>
 
       {/* Get started */}

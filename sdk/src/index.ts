@@ -16,13 +16,6 @@ export interface PactSpecPricing {
   protocol?: PricingProtocol;
 }
 
-export interface PactSpecSLA {
-  p50LatencyMs?: number;
-  p99LatencyMs?: number;
-  uptimeSLA?: number;
-  maxConcurrency?: number;
-}
-
 export interface PactSpecSkill {
   id: string;
   name: string;
@@ -31,7 +24,6 @@ export interface PactSpecSkill {
   inputSchema: Record<string, unknown>;
   outputSchema: Record<string, unknown>;
   pricing?: PactSpecPricing;
-  sla?: PactSpecSLA;
   testSuite?: { url: string; type?: 'http-roundtrip' | 'json-schema-validation' };
   examples?: Array<{ description?: string; input: unknown; expectedOutput: unknown }>;
 }
@@ -42,7 +34,7 @@ export interface PactSpec {
   name: string;
   version: string;
   description?: string;
-  provider: { name: string; url?: string; did?: string; contact?: string };
+  provider: { name: string; url?: string; contact?: string };
   endpoint: { url: string; auth?: { type: AuthType; header?: string } };
   skills: PactSpecSkill[];
   tags?: string[];

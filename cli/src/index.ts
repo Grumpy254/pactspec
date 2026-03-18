@@ -9,6 +9,21 @@ import { parse as parseYaml } from 'yaml';
 // Bundled schema — always available regardless of install location
 import bundledSchema from '../../src/lib/schema/agent-spec.v1.json';
 
+// ── Types used by the test runner ─────────────────────────────────────────────
+interface TestCase {
+  id: string;
+  description?: string;
+  request: { method?: string; headers?: Record<string, string>; body?: unknown };
+  expect: { status: number; outputSchema?: Record<string, unknown> };
+  timeoutMs?: number;
+}
+
+interface TestSuiteFile {
+  version: string;
+  skill: string;
+  tests: TestCase[];
+}
+
 const program = new Command();
 
 program
@@ -256,6 +271,157 @@ program
     console.log(pc.dim('Edit the file, then run: pactspec validate ' + opts.out));
   });
 
+// ── test ──────────────────────────────────────────────────────────────────────
+program
+  .command('test <file>')
+  .description('Run a skill\'s test suite locally against the agent endpoint')
+  .option('-s, --skill <id>', 'Skill ID to test (defaults to first skill with a testSuite)')
+  .option('-e, --endpoint <url>', 'Override the endpoint URL from the spec')
+  .option('--suite <file>', 'Load test suite from a local file instead of the URL in the spec')
+  .option('-t, --timeout <ms>', 'Per-test timeout in milliseconds', '10000')
+  .action(async (file: string, opts: { skill?: string; endpoint?: string; suite?: string; timeout: string }) => {
+    const timeoutMs = parseInt(opts.timeout, 10) || 10000;
+
+    // 1. Load and parse spec
+    let spec: Record<string, unknown>;
+    try {
+      spec = parseSourceFile(file);
+    } catch {
+      console.error(pc.red(`✗ Could not read or parse ${file}`));
+      process.exit(1);
+    }
+
+    const skills = (spec.skills as Array<Record<string, unknown>> | undefined) ?? [];
+
+    // 2. Find target skill
+    let skill: Record<string, unknown> | undefined;
+    if (opts.skill) {
+      skill = skills.find((s) => s.id === opts.skill);
+      if (!skill) {
+        console.error(pc.red(`✗ Skill "${opts.skill}" not found in spec`));
+        console.error(pc.dim(`  Available skills: ${skills.map((s) => s.id).join(', ')}`));
+        process.exit(1);
+      }
+    } else {
+      skill = skills.find((s) => (s.testSuite as Record<string, unknown> | undefined)?.url);
+      if (!skill) {
+        console.error(pc.red('✗ No skill with a testSuite.url found in spec'));
+        console.error(pc.dim('  Add a testSuite.url to a skill, or pass --skill and --suite'));
+        process.exit(1);
+      }
+    }
+
+    // 3. Load test suite
+    let suite: TestSuiteFile;
+    if (opts.suite) {
+      try {
+        suite = JSON.parse(readFileSync(resolve(opts.suite), 'utf-8')) as TestSuiteFile;
+      } catch {
+        console.error(pc.red(`✗ Could not read test suite file: ${opts.suite}`));
+        process.exit(1);
+      }
+    } else {
+      const suiteUrl = ((skill.testSuite as Record<string, unknown>)?.url as string | undefined);
+      if (!suiteUrl) {
+        console.error(pc.red('✗ No testSuite.url on skill — use --suite <file> to provide one locally'));
+        process.exit(1);
+      }
+      console.log(pc.dim(`Fetching test suite from ${suiteUrl}...`));
+      try {
+        const res = await fetch(suiteUrl, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        suite = await res.json() as TestSuiteFile;
+      } catch (err) {
+        console.error(pc.red(`✗ Could not fetch test suite: ${(err as Error).message}`));
+        process.exit(1);
+      }
+    }
+
+    if (!Array.isArray(suite.tests) || suite.tests.length === 0) {
+      console.error(pc.red('✗ Test suite has no tests'));
+      process.exit(1);
+    }
+
+    // 4. Determine endpoint URL
+    const endpointUrl = opts.endpoint ??
+      ((spec.endpoint as Record<string, unknown>)?.url as string | undefined);
+    if (!endpointUrl) {
+      console.error(pc.red('✗ No endpoint URL — pass --endpoint <url> or set endpoint.url in spec'));
+      process.exit(1);
+    }
+
+    const skillId = skill.id as string;
+    console.log('');
+    console.log(`${pc.bold('Running')} ${suite.tests.length} test${suite.tests.length > 1 ? 's' : ''} for skill ${pc.cyan(skillId)}`);
+    console.log(pc.dim(`Endpoint: ${endpointUrl}`));
+    console.log('');
+
+    // 5. Run tests
+    const ajv = new Ajv({ strict: false });
+    addFormats(ajv);
+
+    let passed = 0;
+    let failed = 0;
+
+    for (const test of suite.tests) {
+      const start = Date.now();
+      let statusCode: number | undefined;
+      let body: unknown;
+      let err: string | undefined;
+
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const res = await fetch(endpointUrl, {
+          method: test.request.method ?? 'POST',
+          headers: { 'Content-Type': 'application/json', ...(test.request.headers ?? {}) },
+          body: test.request.body != null ? JSON.stringify(test.request.body) : undefined,
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        statusCode = res.status;
+        try { body = await res.json(); } catch { body = null; }
+      } catch (e) {
+        err = (e as Error).name === 'AbortError' ? `Timed out after ${timeoutMs}ms` : (e as Error).message;
+      }
+
+      const durationMs = Date.now() - start;
+
+      if (err) {
+        console.log(`  ${pc.red('✗')} ${test.id} ${pc.dim(`(${durationMs}ms)`)} — ${pc.red(err)}`);
+        failed++;
+        continue;
+      }
+
+      // Check status
+      if (statusCode !== test.expect.status) {
+        console.log(`  ${pc.red('✗')} ${test.id} ${pc.dim(`(${durationMs}ms)`)} — expected status ${test.expect.status}, got ${statusCode}`);
+        failed++;
+        continue;
+      }
+
+      // Check outputSchema if present
+      if (test.expect.outputSchema && body !== null) {
+        const validate = ajv.compile(test.expect.outputSchema);
+        const valid = validate(body);
+        if (!valid) {
+          const msgs = (validate.errors ?? []).map((e) => `${e.instancePath || '/'} ${e.message}`).join('; ');
+          console.log(`  ${pc.red('✗')} ${test.id} ${pc.dim(`(${durationMs}ms)`)} — schema: ${msgs}`);
+          failed++;
+          continue;
+        }
+      }
+
+      console.log(`  ${pc.green('✓')} ${test.id} ${pc.dim(`(${durationMs}ms)`)}`);
+      passed++;
+    }
+
+    console.log('');
+    console.log(`${pc.green(`${passed} passed`)}  ${failed > 0 ? pc.red(`${failed} failed`) : pc.dim('0 failed')}`);
+
+    if (failed > 0) process.exit(1);
+  });
+
 // ── convert ───────────────────────────────────────────────────────────────────
 program
   .command('convert <format> <file>')
@@ -306,6 +472,29 @@ program
 interface ConvertResult {
   spec: Record<string, unknown>;
   warnings: string[];
+}
+
+/** Infer a JSON Schema from a concrete example value. */
+function inferSchema(value: unknown): Record<string, unknown> {
+  if (value === null || value === undefined) return { type: 'object' };
+  if (Array.isArray(value)) {
+    return {
+      type: 'array',
+      items: value.length > 0 ? inferSchema(value[0]) : {},
+    };
+  }
+  if (typeof value === 'object') {
+    const props: Record<string, unknown> = {};
+    const required: string[] = [];
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      props[k] = inferSchema(v);
+      if (v !== null && v !== undefined) required.push(k);
+    }
+    const schema: Record<string, unknown> = { type: 'object', properties: props };
+    if (required.length > 0) schema.required = required;
+    return schema;
+  }
+  return { type: typeof value };
 }
 
 function slugify(s: string): string {
@@ -379,7 +568,7 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
         }
       }
 
-      // Output schema from 200 response
+      // Output schema from 200/201 response — schema first, then examples, then warn
       let outputSchema: Record<string, unknown> = { type: 'object' };
       const responses = (op.responses ?? {}) as Record<string, unknown>;
       const ok = (responses['200'] ?? responses['201']) as Record<string, unknown> | undefined;
@@ -388,11 +577,25 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
         const jsonContent = content?.['application/json'] as Record<string, unknown> | undefined;
         if (jsonContent?.schema) {
           outputSchema = jsonContent.schema as Record<string, unknown>;
+        } else if (jsonContent?.example) {
+          // Infer schema from inline example
+          outputSchema = inferSchema(jsonContent.example);
+          warnings.push(`${method.toUpperCase()} ${path}: outputSchema inferred from response example — review before publishing`);
+        } else if (jsonContent?.examples) {
+          // Use first named example
+          const examples = jsonContent.examples as Record<string, Record<string, unknown>>;
+          const first = Object.values(examples)[0];
+          if (first?.value !== undefined) {
+            outputSchema = inferSchema(first.value);
+            warnings.push(`${method.toUpperCase()} ${path}: outputSchema inferred from response example — review before publishing`);
+          } else {
+            warnings.push(`${method.toUpperCase()} ${path}: No response schema or example — define outputSchema manually`);
+          }
         } else {
-          warnings.push(`${method.toUpperCase()} ${path}: No 200 application/json response schema — using empty outputSchema`);
+          warnings.push(`${method.toUpperCase()} ${path}: No response schema or example — define outputSchema manually`);
         }
       } else {
-        warnings.push(`${method.toUpperCase()} ${path}: No 200/201 response defined — using empty outputSchema`);
+        warnings.push(`${method.toUpperCase()} ${path}: No 200/201 response defined — define outputSchema manually`);
       }
 
       skills.push({

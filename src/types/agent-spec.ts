@@ -11,13 +11,6 @@ export interface AgentSpecPricing {
   protocol?: PricingProtocol;
 }
 
-export interface AgentSpecSLA {
-  p50LatencyMs?: number;
-  p99LatencyMs?: number;
-  uptimeSLA?: number;
-  maxConcurrency?: number;
-}
-
 export interface AgentSpecTestSuite {
   url: string;
   type?: TestSuiteType;
@@ -38,14 +31,12 @@ export interface AgentSpecSkill {
   outputSchema: Record<string, unknown>;
   examples?: AgentSpecExample[];
   pricing?: AgentSpecPricing;
-  sla?: AgentSpecSLA;
   testSuite?: AgentSpecTestSuite;
 }
 
 export interface AgentSpecProvider {
   name: string;
   url?: string;
-  did?: string;
   contact?: string;
 }
 
@@ -83,7 +74,6 @@ export interface AgentRow {
   description: string | null;
   provider_name: string;
   provider_url: string | null;
-  provider_did: string | null;
   endpoint_url: string;
   spec: AgentSpec;
   tags: string[];

@@ -1,0 +1,81 @@
+{
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:pactspec:summarize",
+  "name": "Text Summarizer",
+  "version": "1.0.0",
+  "description": "Summarizes text into a configurable number of sentences using Claude Haiku. Fast, cheap, and accurate for articles, documents, and paragraphs.",
+  "provider": {
+    "name": "PactSpec",
+    "url": "https://pactspec.dev",
+    "contact": "hello@pactspec.dev"
+  },
+  "endpoint": {
+    "url": "https://pactspec.dev/api/demo/summarize",
+    "auth": { "type": "none" }
+  },
+  "skills": [
+    {
+      "id": "summarize",
+      "name": "Summarize Text",
+      "description": "Condenses a passage of text into a short summary. The number of output sentences is configurable (default: 3, max: 10). Input text is capped at 8000 characters.",
+      "tags": ["nlp", "summarization", "text", "claude"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+            "description": "The text to summarize"
+          },
+          "maxSentences": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Number of sentences in the summary. Defaults to 3."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["summary", "sentences"],
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "The generated summary"
+          },
+          "sentences": {
+            "type": "integer",
+            "description": "Number of sentences in the returned summary"
+          }
+        }
+      },
+      "pricing": {
+        "model": "per-invocation",
+        "amount": 0.001,
+        "currency": "USD",
+        "protocol": "none"
+      },
+      "testSuite": {
+        "url": "https://pactspec.dev/test-suites/summarize.json",
+        "type": "http-roundtrip"
+      },
+      "examples": [
+        {
+          "description": "Summarize a paragraph into 2 sentences",
+          "input": {
+            "text": "The James Webb Space Telescope is a space telescope designed to conduct infrared astronomy.",
+            "maxSentences": 2
+          },
+          "expectedOutput": {
+            "summary": "The James Webb Space Telescope conducts infrared astronomy. It observes objects too distant or faint for Hubble.",
+            "sentences": 2
+          }
+        }
+      ]
+    }
+  ],
+  "tags": ["nlp", "summarization", "ai", "claude"],
+  "license": "MIT"
+}

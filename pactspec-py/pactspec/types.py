@@ -12,13 +12,6 @@ class PactSpecPricing(TypedDict, total=False):
     protocol: Literal["x402", "stripe", "none"]
 
 
-class PactSpecSLA(TypedDict, total=False):
-    p50LatencyMs: int
-    p99LatencyMs: int
-    uptimeSLA: float
-    maxConcurrency: int
-
-
 class PactSpecSkill(TypedDict, total=False):
     id: str
     name: str
@@ -27,7 +20,6 @@ class PactSpecSkill(TypedDict, total=False):
     inputSchema: Dict[str, Any]
     outputSchema: Dict[str, Any]
     pricing: PactSpecPricing
-    sla: PactSpecSLA
     testSuite: Dict[str, str]
     examples: List[Dict[str, Any]]
 

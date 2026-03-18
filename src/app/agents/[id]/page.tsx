@@ -59,15 +59,6 @@ function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string
             </p>
           </div>
         )}
-        {skill.sla && (
-          <div>
-            <span className="text-gray-500 text-xs uppercase tracking-wide">SLA</span>
-            <p className="text-gray-300 mt-0.5">
-              {skill.sla.p99LatencyMs != null && `p99 ${skill.sla.p99LatencyMs}ms`}
-              {skill.sla.uptimeSLA != null && ` · ${(skill.sla.uptimeSLA * 100).toFixed(1)}% uptime`}
-            </p>
-          </div>
-        )}
         {skill.testSuite?.url && (
           <div>
             <span className="text-gray-500 text-xs uppercase tracking-wide">Test Suite</span>

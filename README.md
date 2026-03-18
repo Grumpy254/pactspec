@@ -11,7 +11,6 @@ PactSpec fills the gap between existing transport protocols (MCP, A2A) and a com
 | Skill-level I/O schemas | ✓ Tool inputSchema (JSON Schema on tool parameters) | Partial (skill descriptions, no machine-readable I/O schemas) | ✓ Per-skill inputSchema + outputSchema |
 | Pricing declaration | ✗ | ✗ | ✓ Model, amount, currency, protocol |
 | Executable test suite | ✗ | ✗ | ✓ HTTP roundtrip tests at a URL |
-| SLA declarations | ✗ | ✗ | ✓ p99 latency, uptime |
 | Verified badge (tamper-evident record) | ✗ | ✗ | ✓ SHA-256 fingerprint; Ed25519 signing planned v1.1 |
 | Payment protocol routing | ✗ | ✗ | ✓ x402, Stripe, none |
 | Public open registry | ✗ | ✗ | ✓ pactspec.dev |

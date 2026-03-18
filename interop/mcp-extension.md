@@ -2,7 +2,7 @@
 
 MCP (Model Context Protocol) has significant adoption. Rather than competing with it,
 PactSpec can be layered on top of an existing MCP tool manifest using the `x-pactspec`
-extension field. This lets MCP adopters gain pricing, SLA, test suite, and registry
+extension field. This lets MCP adopters gain pricing, test suite, and registry
 discovery without migrating away from MCP.
 
 ---
@@ -36,7 +36,7 @@ reference can be embedded in any MCP server's tool definitions:
 The `x-pactspec` block tells any consumer that:
 1. This tool has a full PactSpec published at the registry
 2. It has been verified (or not)
-3. Pricing, SLA, and test suite details can be fetched from the registry URL
+3. Pricing and test suite details can be fetched from the registry URL
 
 ---
 
@@ -78,7 +78,6 @@ The converter maps:
 | `tools[].inputSchema` | `skills[].inputSchema` |
 | *(not in MCP)* | `skills[].outputSchema` — must be added manually |
 | *(not in MCP)* | `skills[].pricing` — must be added manually |
-| *(not in MCP)* | `skills[].sla` — must be added manually |
 | *(not in MCP)* | `skills[].testSuite` — must be added manually |
 
 The converter emits warnings for every field that requires manual completion.
@@ -94,7 +93,6 @@ The converter emits warnings for every field that requires manual completion.
 | Tool parameter schemas | ✓ | ✓ |
 | Output schemas | ✗ | ✓ |
 | Pricing metadata | ✗ | ✓ |
-| SLA declarations | ✗ | ✓ |
 | Executable test suite | ✗ | ✓ |
 | Verified record | ✗ | ✓ |
 | Public registry / discovery | ✗ | ✓ |

@@ -1,0 +1,81 @@
+{
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:pactspec:validate-schema",
+  "name": "JSON Schema Validator",
+  "version": "1.0.0",
+  "description": "Validates any JSON value against a JSON Schema (Draft 2020-12). Returns valid/invalid with detailed error paths.",
+  "provider": {
+    "name": "PactSpec",
+    "url": "https://pactspec.dev",
+    "contact": "hello@pactspec.dev"
+  },
+  "endpoint": {
+    "url": "https://pactspec.dev/api/demo/validate-schema",
+    "auth": { "type": "none" }
+  },
+  "skills": [
+    {
+      "id": "validate-schema",
+      "name": "Validate Schema",
+      "description": "Validate a JSON value against a JSON Schema. Returns a boolean result and an array of error messages with JSON Pointer paths.",
+      "tags": ["validation", "json-schema", "utility"],
+      "inputSchema": {
+        "type": "object",
+        "required": ["schema", "data"],
+        "properties": {
+          "schema": {
+            "type": "object",
+            "description": "A valid JSON Schema (Draft 2020-12) to validate against"
+          },
+          "data": {
+            "description": "The JSON value to validate"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["valid", "errors"],
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "True if data satisfies the schema"
+          },
+          "errors": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of validation error messages with JSON Pointer paths. Empty when valid=true."
+          }
+        }
+      },
+      "pricing": {
+        "model": "free",
+        "amount": 0,
+        "currency": "USD"
+      },
+      "testSuite": {
+        "url": "https://pactspec.dev/test-suites/validate-schema.json",
+        "type": "http-roundtrip"
+      },
+      "examples": [
+        {
+          "description": "Valid data",
+          "input": {
+            "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } },
+            "data": { "name": "Alice" }
+          },
+          "expectedOutput": { "valid": true, "errors": [] }
+        },
+        {
+          "description": "Invalid data",
+          "input": {
+            "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } },
+            "data": { "name": 42 }
+          },
+          "expectedOutput": { "valid": false, "errors": ["/name must be string"] }
+        }
+      ]
+    }
+  ],
+  "tags": ["validation", "utility", "json-schema"],
+  "license": "MIT"
+}

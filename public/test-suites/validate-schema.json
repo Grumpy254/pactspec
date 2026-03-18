@@ -1,0 +1,93 @@
+{
+  "version": "1.0",
+  "skill": "validate-schema",
+  "tests": [
+    {
+      "id": "valid-data-passes",
+      "description": "Valid data against a simple schema returns valid=true",
+      "request": {
+        "method": "POST",
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "schema": {
+            "type": "object",
+            "required": ["name", "age"],
+            "properties": {
+              "name": { "type": "string" },
+              "age":  { "type": "integer", "minimum": 0 }
+            }
+          },
+          "data": { "name": "Alice", "age": 30 }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid", "errors"],
+          "properties": {
+            "valid":  { "type": "boolean", "const": true },
+            "errors": { "type": "array", "maxItems": 0 }
+          }
+        }
+      }
+    },
+    {
+      "id": "invalid-data-fails",
+      "description": "Invalid data returns valid=false with errors",
+      "request": {
+        "method": "POST",
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "schema": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" }
+            }
+          },
+          "data": { "name": 42 }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid", "errors"],
+          "properties": {
+            "valid":  { "type": "boolean", "const": false },
+            "errors": { "type": "array", "minItems": 1 }
+          }
+        }
+      }
+    },
+    {
+      "id": "missing-required-field",
+      "description": "Missing required field returns valid=false",
+      "request": {
+        "method": "POST",
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "schema": {
+            "type": "object",
+            "required": ["email"],
+            "properties": {
+              "email": { "type": "string", "format": "email" }
+            }
+          },
+          "data": {}
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": false }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -57,26 +57,24 @@ If it is compromised, attestation records could be modified. This is the same tr
 as npm, PyPI, or Docker Hub — a centralized authority you choose to trust.
 
 **What partially mitigates this:** The spec itself is open. Anyone can run their own
-registry. The `$id` in the schema is a URL, not an authority claim. The DID field on
-providers gestures toward a decentralized future.
+registry. The `$id` in the schema is a URL, not an authority claim.
 
 **What is planned:** A decentralized attestation layer using DID-based signing, allowing
 providers to anchor their verified records independently of the PactSpec registry.
 
 ---
 
-## 4. SLA and pricing declarations are unverified metadata
+## 4. Pricing declarations are unverified metadata
 
-**What happens:** Providers declare `"p99LatencyMs": 3000` and
-`"uptimeSLA": 0.999` in their spec. The registry stores and displays this.
+**What happens:** Providers declare `"amount": 0.01` and `"model": "per-invocation"` in
+their spec. The registry stores and displays this.
 
 **What this means in practice:** These are self-reported numbers with no monitoring,
-no enforcement, and no penalties for violation. They are useful for discovery and
-comparison, but they carry no legal or contractual weight.
+no enforcement, and no penalties for misrepresentation. They are useful for discovery
+and comparison, but carry no legal or contractual weight.
 
-**What is planned:** Optional integration with external monitoring providers (e.g.,
-Better Uptime, Checkly) to display *measured* SLAs alongside declared ones. Consumers
-will be able to see both.
+**What is planned:** Optional integration with payment provider webhooks to confirm
+that a pricing model matches actual charges collected.
 
 ---
 

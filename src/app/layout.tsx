@@ -6,12 +6,12 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'PactSpec — Machine-readable AI Agent Registry',
+  title: 'PactSpec — The trust layer for AI agents',
   description:
-    'Open protocol for AI agent capability declaration with pricing, test suites, and tamper-evident verification records.',
+    'MCP connects agents. PactSpec makes them trustworthy. The open standard for declaring, verifying, and discovering AI agent capabilities — with pricing, test suites, and tamper-evident verification.',
   openGraph: {
-    title: 'PactSpec',
-    description: 'The open standard for declaring AI agent capabilities.',
+    title: 'PactSpec — The trust layer for AI agents',
+    description: 'MCP connects agents. PactSpec makes them trustworthy. Open standard for agent capability declaration with pricing, verified records, and machine-readable discovery.',
     url: 'https://pactspec.dev',
     siteName: 'PactSpec',
   },

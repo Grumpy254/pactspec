@@ -37,7 +37,7 @@ The key thing to understand is that agents are *services*. They run somewhere, t
 
 Several standards are relevant to the AI agent space, and it is worth being precise about what each one actually solves.
 
-**MCP (Model Context Protocol)** is a standard developed by Anthropic for connecting AI models to tools and data sources. It defines how a language model running locally can call out to a tool server — for example, asking a file system tool to read a file, or a database tool to run a query. MCP is primarily about the *invocation protocol*: the message format, the transport layer, how tools advertise their parameters to the model that is calling them. It is a runtime communication standard. It does not address pricing, SLAs, independent verification, or third-party discovery. You cannot browse an MCP directory and find "all agents that process invoices, verified, under $0.01 per call."
+**MCP (Model Context Protocol)** is a standard developed by Anthropic for connecting AI models to tools and data sources. It defines how a language model running locally can call out to a tool server — for example, asking a file system tool to read a file, or a database tool to run a query. MCP is primarily about the *invocation protocol*: the message format, the transport layer, how tools advertise their parameters to the model that is calling them. It is a runtime communication standard. It does not address pricing, independent verification, or third-party discovery. You cannot browse an MCP directory and find "all agents that process invoices, verified, under $0.01 per call."
 
 **A2A (Agent-to-Agent protocol)** is a standard, also from Google, focused on how agents communicate with each other: how one agent delegates a task to another, how tasks are streamed, how results are returned. Like MCP, it is a transport and invocation standard. It solves "how does an agent call another agent" but not "how do I know what that agent actually does, what it costs, or whether it works."
 
@@ -69,7 +69,7 @@ Consider an orchestration platform that wants to route tasks to the best availab
 
 Without a standard for capability declaration, every agent has its own documentation format, its own pricing page, its own (possibly outdated) changelog. Automated routing is impossible. Human curation is required at every step.
 
-With a standard, an orchestrator can fetch a machine-readable spec, compare it against task requirements, check the verified flag, look at the SLA, pick the cheapest verified agent that meets the latency requirement, and dispatch the task — all without human involvement.
+With a standard, an orchestrator can fetch a machine-readable spec, compare it against task requirements, check the verified flag, pick the cheapest verified agent, and dispatch the task — all without human involvement.
 
 The same logic applies to agent marketplaces, enterprise procurement ("which agents are approved for use with our data?"), compliance auditing ("show me all agents we've called this month and their verification status"), and payment automation (if the pricing is machine-readable and the payment protocol is specified, an orchestrator can pay for agent calls without a human approving each transaction).
 
@@ -85,7 +85,7 @@ PactSpec is a machine-readable JSON document format that declares what an AI age
 
 Think about the label on a jar of food. Before you buy it, the label tells you: the ingredients (what is in it), the nutritional information (what you get), the manufacturer (who made it), the expiry date (when it might stop being good), and a certification badge if it has passed independent quality checks. You do not need to open the jar to get this information. You do not need to phone the manufacturer. The label is standardized — it works the same way on every product — so you can compare products from different manufacturers side by side.
 
-A PactSpec is that label, but for an AI agent. Before your system calls the agent, the spec tells you: what tasks it handles (skills), what inputs and outputs each skill expects (schemas), what it costs (pricing), how fast it typically responds (SLA), and whether it has been independently verified to actually work (attestation). The format is standardized, so an orchestrator or marketplace can process specs from thousands of different agents using the same code.
+A PactSpec is that label, but for an AI agent. Before your system calls the agent, the spec tells you: what tasks it handles (skills), what inputs and outputs each skill expects (schemas), what it costs (pricing), and whether it has been independently verified to actually work (attestation). The format is standardized, so an orchestrator or marketplace can process specs from thousands of different agents using the same code.
 
 ### What PactSpec is NOT
 
@@ -125,7 +125,6 @@ A PactSpec document is a JSON object. Here is a complete annotated example, foll
   "provider": {
     "name": "Acme Corp",
     "url": "https://acme.example",
-    "did": "did:web:acme.example",
     "contact": "agents@acme.example"
   },
   "endpoint": {
@@ -194,12 +193,6 @@ A PactSpec document is a JSON object. Here is a complete annotated example, foll
         "amount": 0.005,
         "currency": "USD",
         "protocol": "stripe"
-      },
-      "sla": {
-        "p50LatencyMs": 800,
-        "p99LatencyMs": 3000,
-        "uptimeSLA": 0.999,
-        "maxConcurrency": 100
       },
       "testSuite": {
         "url": "https://acme.example/agents/invoice/tests.json",
@@ -283,7 +276,6 @@ The schema enforces the three-part number format with the regex `^\d+\.\d+\.\d+$
 
 - `name` (required): The organization or individual's name. e.g., `"Acme Corp"`.
 - `url` (optional): A URI pointing to the provider's website. Stored in `provider_url` in the database and returned in search results.
-- `did` (optional): A Decentralized Identifier. A DID is a W3C standard identifier format that is cryptographically verifiable — the holder of the DID can prove they control it by signing a challenge. Including a DID here sets the foundation for future cryptographic verification of agent identity. e.g., `"did:web:acme.example"`. Stored in `provider_did` in the database.
 - `contact` (optional): An email address for support or security contact. Must be a valid email format.
 
 **Required:** The `provider` object itself is required; only `name` is required within it.
@@ -311,7 +303,7 @@ The schema enforces the three-part number format with the regex `^\d+\.\d+\.\d+$
 
 **What it is:** An array of skill objects, each describing one thing the agent can do. At least one skill is required.
 
-**Why it exists:** Most agents can do more than one thing. An invoice agent might have an `extract-invoice` skill and a `classify-document` skill. The skills array lets you describe all capabilities in a single spec, each with its own schema, pricing, SLA, and test suite.
+**Why it exists:** Most agents can do more than one thing. An invoice agent might have an `extract-invoice` skill and a `classify-document` skill. The skills array lets you describe all capabilities in a single spec, each with its own schema, pricing, and test suite.
 
 Each skill is an object with the following fields:
 
@@ -435,23 +427,6 @@ Each example has:
   - `"none"`: Payment is handled out-of-band (subscription, enterprise agreement, etc.) or the skill is free.
 
 **Required:** The `pricing` object is optional per skill. If present, `model`, `amount`, and `currency` are all required.
-
-#### `skills[].sla`
-
-**What it is:** An object declaring the performance commitments for this skill.
-
-**Why it exists:** Before an orchestrator routes a latency-sensitive task to an agent, it needs to know whether the agent can respond fast enough. SLA data is also used for capacity planning and for detecting agents whose performance has degraded.
-
-**Fields:**
-
-- `p50LatencyMs` (optional): The 50th percentile latency in milliseconds. This is the median — half of all requests complete faster than this value. e.g., `800` means half of requests return within 800ms.
-- `p99LatencyMs` (optional): The 99th percentile latency in milliseconds. This is the "tail" — 99% of requests complete within this time. e.g., `3000` means 99% of requests return within 3 seconds. 1% may be slower.
-- `uptimeSLA` (optional): A decimal between 0 and 1 representing the promised availability. e.g., `0.999` means 99.9% uptime (about 8.7 hours of downtime per year). `0.9999` would be 99.99% ("four nines"). The database enforces the 0–1 constraint with a CHECK constraint.
-- `maxConcurrency` (optional): The maximum number of simultaneous requests the skill can handle. An orchestrator can use this to avoid overwhelming an agent with parallel requests.
-
-**What "percentile" means in plain English:** Imagine you log the response time for 100 requests. Sort them from fastest to slowest. The p50 is the 50th value in that sorted list — the middle. The p99 is the 99th value — the second-to-last. p50 tells you what typical performance feels like; p99 tells you how bad the worst cases can get.
-
-**Required:** No.
 
 #### `skills[].testSuite`
 
@@ -1004,7 +979,6 @@ This is the primary registry table. Each row represents one published agent spec
 | `description` | TEXT | NULL | Agent description (from `spec.description`). Nullable because description is optional. |
 | `provider_name` | TEXT | NOT NULL | Provider's name (from `spec.provider.name`). Stored separately for fast search by provider. |
 | `provider_url` | TEXT | NULL | Provider URL. |
-| `provider_did` | TEXT | NULL | Provider DID. |
 | `endpoint_url` | TEXT | NOT NULL | The agent's HTTP endpoint URL. Stored separately so the validator can access it without parsing the full JSONB spec. |
 | `spec` | JSONB | NOT NULL | The complete spec document as a JSONB blob. This is the source of truth for the full spec. JSONB means it is stored in a binary format that supports efficient querying, indexing, and traversal. |
 | `tags` | TEXT[] | DEFAULT '{}' | Array of tag strings. Stored as a PostgreSQL native array (not inside the JSONB) for efficient `@>` (contains) and `&&` (overlaps) operations. |
@@ -1052,8 +1026,6 @@ This table stores a normalized, flat representation of each skill from each publ
 | `pricing_currency` | TEXT | NULL | e.g., `"USD"`. |
 | `pricing_protocol` | TEXT | NULL | e.g., `"stripe"`. |
 | `test_suite_url` | TEXT | NULL | The skill's test suite URL, if any. |
-| `sla_p99_ms` | INTEGER | NULL | p99 latency in milliseconds. |
-| `sla_uptime` | NUMERIC | NULL | Uptime SLA as decimal. Constrained to [0, 1] by `skills_sla_uptime_range` check constraint. |
 
 **The unique constraint:** `skills_agent_skill_unique UNIQUE (agent_id, skill_id)` — added in migration 002. Prevents duplicate skill rows for the same agent. Used by the upsert on publish to update existing skill rows rather than creating new ones.
 
@@ -1519,7 +1491,7 @@ After running `init`, the CLI prints `✓ Created pactspec.json` and suggests th
 
 **Arguments:** Path to a JSON file.
 
-**What it checks:** Everything the JSON Schema specifies. All required fields present. All fields of the correct type. URN format for `id`. Semver format for `version`. URI format for endpoint URL. Pricing enum values. SLA range constraints (p50/p99 non-negative integers, uptimeSLA 0–1, etc.).
+**What it checks:** Everything the JSON Schema specifies. All required fields present. All fields of the correct type. URN format for `id`. Semver format for `version`. URI format for endpoint URL. Pricing enum values.
 
 **Output on success:**
 ```
@@ -1650,7 +1622,6 @@ The OpenAPI converter does the following mapping:
 What gets lost (and generates warnings):
 - Authentication details (OpenAPI security schemes are not mapped to `endpoint.auth`)
 - Pricing (OpenAPI has no pricing concept — all skills get `free` as placeholder)
-- SLA (OpenAPI has no SLA concept)
 - Test suites (must be written by hand)
 - Operations with non-JSON request bodies
 - Operations missing a 200/201 response schema
@@ -1863,7 +1834,7 @@ This flag is currently required for local development. A better developer experi
 - **1 production adopter:** Validate the publish/verify workflow under real conditions. Identify any friction in the spec format from real-world usage.
 - **3 production adopters:** Trigger the multi-vendor working group transition. The spec gains external stakeholders.
 - **PyPI and npm published:** Lower the barrier to adoption for Python and Node.js ecosystems.
-- **DID-based provider verification:** Use the `provider.did` field to verify the provider's identity cryptographically. An agent claiming to be from `acme.example` would need to prove control of `did:web:acme.example`.
+- **DID-based provider verification (v1.1):** Allow providers to include a `provider.did` field anchored to a DID document for cryptographic identity verification. Not in v1 — DID resolution is a non-trivial dependency. The planned path is `did:web` (HTTP-based resolution) as a first step.
 - **Marketplace integration:** A consumer-facing marketplace UI that lets developers browse verified agents, inspect their specs, and try them out.
 
 ---
