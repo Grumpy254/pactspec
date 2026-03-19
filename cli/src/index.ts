@@ -45,6 +45,70 @@ function parseSourceFile(file: string): Record<string, unknown> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function fetchMcpTools(endpoint: string): Promise<{
+  tools: Record<string, unknown>[];
+  serverName?: string;
+  serverVersion?: string;
+}> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'list_tools', params: {} }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const text = await res.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Non-JSON response from MCP server');
+  }
+
+  if (!res.ok) {
+    let errMsg = `HTTP ${res.status}`;
+    if (isRecord(data) && isRecord(data.error) && typeof data.error.message === 'string') {
+      errMsg = data.error.message;
+    } else if (isRecord(data) && typeof data.error === 'string') {
+      errMsg = data.error;
+    }
+    throw new Error(errMsg);
+  }
+
+  // Accept both JSON-RPC and simple payloads.
+  const payload = isRecord(data) && data.result !== undefined
+    ? (data.result as unknown)
+    : data;
+
+  const tools =
+    (isRecord(payload) && Array.isArray(payload.tools) ? payload.tools : null) ??
+    (Array.isArray(payload) ? payload : null);
+
+  if (!tools) {
+    throw new Error('list_tools response missing tools[]');
+  }
+
+  const serverName =
+    (isRecord(payload) ? (payload.serverName as string | undefined) ?? (payload.name as string | undefined) : undefined) ??
+    (isRecord(data) ? (data.serverName as string | undefined) ?? (data.name as string | undefined) : undefined);
+  const serverVersion =
+    (isRecord(payload) ? (payload.version as string | undefined) : undefined) ??
+    (isRecord(data) ? (data.version as string | undefined) : undefined);
+
+  return { tools: tools as Record<string, unknown>[], serverName, serverVersion };
+}
+
 // ── validate ─────────────────────────────────────────────────────────────────
 program
   .command('validate <file>')
@@ -55,7 +119,7 @@ program
 
     let spec: unknown;
     try {
-      spec = JSON.parse(readFileSync(resolve(file), 'utf-8'));
+      spec = parseSourceFile(file);
     } catch {
       console.error(pc.red(`✗ Could not read or parse ${file}`));
       process.exit(1);
@@ -86,7 +150,7 @@ program
   .action(async (file: string, opts: { registry: string; agentId?: string }) => {
     let spec: unknown;
     try {
-      spec = JSON.parse(readFileSync(resolve(file), 'utf-8'));
+      spec = parseSourceFile(file);
     } catch {
       console.error(pc.red(`✗ Could not read or parse ${file}`));
       process.exit(1);
@@ -319,7 +383,7 @@ program
     let suite: TestSuiteFile;
     if (opts.suite) {
       try {
-        suite = JSON.parse(readFileSync(resolve(opts.suite), 'utf-8')) as TestSuiteFile;
+        suite = parseSourceFile(opts.suite) as TestSuiteFile;
       } catch {
         console.error(pc.red(`✗ Could not read test suite file: ${opts.suite}`));
         process.exit(1);
@@ -426,6 +490,58 @@ program
     if (failed > 0) process.exit(1);
   });
 
+// ── from-mcp ─────────────────────────────────────────────────────────────────
+program
+  .command('from-mcp <url>')
+  .description('Fetch list_tools from an MCP server and generate a PactSpec')
+  .option('-o, --out <file>', 'Output file (default: pactspec.json)')
+  .option('--name <name>', 'Override agent name')
+  .option('--version <version>', 'Override version')
+  .action(async (url: string, opts: { out?: string; name?: string; version?: string }) => {
+    const endpoint = url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `http://${url}`;
+
+    let tools: Record<string, unknown>[];
+    let serverName: string | undefined;
+    let serverVersion: string | undefined;
+
+    try {
+      const result = await fetchMcpTools(endpoint);
+      tools = result.tools;
+      serverName = result.serverName;
+      serverVersion = result.serverVersion;
+    } catch (err) {
+      console.error(pc.red(`✗ Could not fetch list_tools from ${endpoint}`));
+      console.error(pc.red(`  ${(err as Error).message}`));
+      console.error(pc.dim('  If your MCP server does not expose HTTP list_tools, use: pactspec convert mcp <manifest.json>'));
+      process.exit(1);
+      return;
+    }
+
+    let fallbackName = 'MCP Agent';
+    try {
+      fallbackName = new URL(endpoint).hostname || fallbackName;
+    } catch { /* ignore */ }
+
+    const doc = {
+      name: opts.name ?? serverName ?? fallbackName,
+      version: opts.version ?? serverVersion ?? '1.0.0',
+      url: endpoint,
+      tools,
+    };
+
+    const result = convertMcp(doc);
+    const outFile = opts.out ?? 'pactspec.json';
+    writeFileSync(resolve(outFile), JSON.stringify(result.spec, null, 2));
+    console.log(pc.green(`✓ Wrote ${outFile} from MCP list_tools`));
+    if (result.warnings.length > 0) {
+      console.log(pc.yellow('\nWarnings (review before publishing):'));
+      for (const w of result.warnings) console.log(pc.yellow(`  ! ${w}`));
+    }
+    console.log(pc.dim(`\nNext: pactspec validate ${outFile}`));
+  });
+
 // ── convert ───────────────────────────────────────────────────────────────────
 program
   .command('convert <format> <file>')
@@ -471,6 +587,198 @@ program
     }
   });
 
+// ── from-mcp ──────────────────────────────────────────────────────────────────
+program
+  .command('from-mcp <url>')
+  .description('Fetch tools/list from a live MCP server and generate a PactSpec file')
+  .option('-o, --out <file>', 'Output file (default: <agent-slug>.pactspec.json)')
+  .option('--provider <name>', 'Provider name (default: inferred from URL)')
+  .option('--provider-url <url>', 'Provider URL (default: origin of <url>)')
+  .option('--agent-id <id>', 'Override the urn:pactspec:provider:name id')
+  .option('--publish', 'Publish immediately after generating (requires --agent-id)')
+  .option('--registry <url>', 'Registry URL', 'https://pactspec.dev')
+  .action(async (url: string, opts: {
+    out?: string;
+    provider?: string;
+    providerUrl?: string;
+    agentId?: string;
+    publish?: boolean;
+    registry: string;
+  }) => {
+    // Normalise URL
+    let mcpUrl: URL;
+    try {
+      mcpUrl = new URL(url);
+    } catch {
+      console.error(pc.red(`✗ Invalid URL: ${url}`));
+      process.exit(1);
+    }
+
+    console.log(pc.dim(`Connecting to MCP server at ${mcpUrl.href}...`));
+
+    // Send tools/list JSON-RPC request.
+    // Supports both plain JSON responses and SSE streams (text/event-stream).
+    let toolsResult: unknown;
+    try {
+      const res = await fetch(mcpUrl.href, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream',
+        },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
+      });
+
+      const contentType = res.headers.get('content-type') ?? '';
+
+      if (contentType.includes('text/event-stream')) {
+        // SSE transport: parse event stream and find the first result message
+        const text = await res.text();
+        const lines = text.split('\n');
+        let jsonStr = '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            jsonStr = line.slice(6).trim();
+            try {
+              const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+              if (parsed.result !== undefined) { toolsResult = parsed; break; }
+            } catch { /* keep reading */ }
+          }
+        }
+        if (!toolsResult) {
+          console.error(pc.red('✗ Could not extract tools/list result from SSE stream'));
+          console.error(pc.dim('  Raw response:\n' + text.slice(0, 500)));
+          process.exit(1);
+        }
+      } else {
+        const text = await res.text();
+        try {
+          toolsResult = JSON.parse(text);
+        } catch {
+          console.error(pc.red(`✗ Server returned non-JSON response (HTTP ${res.status})`));
+          console.error(pc.dim('  Response: ' + text.slice(0, 300)));
+          process.exit(1);
+        }
+      }
+    } catch (err) {
+      console.error(pc.red(`✗ Could not reach ${mcpUrl.href}`));
+      console.error(pc.red(`  ${(err as Error).message}`));
+      console.error(pc.dim(`\n  Is your MCP server running? Try: curl -X POST ${mcpUrl.href} -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`));
+      process.exit(1);
+    }
+
+    // Extract tools array from JSON-RPC response
+    const rpc = toolsResult as Record<string, unknown>;
+    if (rpc.error) {
+      const rpcErr = rpc.error as Record<string, unknown>;
+      console.error(pc.red(`✗ MCP error ${rpcErr.code ?? ''}: ${rpcErr.message ?? JSON.stringify(rpcErr)}`));
+      process.exit(1);
+    }
+
+    const result = rpc.result as Record<string, unknown> | undefined;
+    const tools = (result?.tools ?? result ?? []) as Array<Record<string, unknown>>;
+
+    if (!Array.isArray(tools) || tools.length === 0) {
+      console.error(pc.red('✗ No tools returned by the MCP server'));
+      console.error(pc.dim('  Response: ' + JSON.stringify(toolsResult).slice(0, 300)));
+      process.exit(1);
+    }
+
+    console.log(pc.green(`✓ Found ${tools.length} tool${tools.length === 1 ? '' : 's'}: ${tools.map((t) => t.name as string).join(', ')}`));
+
+    // Build PactSpec
+    const origin = opts.providerUrl ?? mcpUrl.origin;
+    const providerName = opts.provider ?? mcpUrl.hostname;
+    const providerSlug = slugify(providerName).split('-')[0] ?? 'provider';
+    const agentSlug = slugify(mcpUrl.hostname + (mcpUrl.pathname !== '/' ? '-' + mcpUrl.pathname : ''));
+
+    const skills = tools.map((tool) => {
+      const toolName = (tool.name as string | undefined) ?? 'tool';
+      const inputSchema = (tool.inputSchema as Record<string, unknown> | undefined) ??
+        (tool.parameters as Record<string, unknown> | undefined) ??
+        { type: 'object' };
+      return {
+        id: slugify(toolName) || 'tool',
+        name: toolName,
+        description: (tool.description as string | undefined) ?? toolName,
+        inputSchema,
+        // MCP doesn't define output schemas — use a generic object as placeholder
+        outputSchema: { type: 'object', description: 'Define the output schema for this skill' },
+        pricing: { model: 'free', amount: 0, currency: 'USD' },
+      };
+    });
+
+    const specId = opts.agentId
+      ? (opts.agentId.startsWith('urn:pactspec:') ? opts.agentId : `urn:pactspec:${opts.agentId}`)
+      : `urn:pactspec:${providerSlug}:${agentSlug || 'agent'}`;
+
+    const spec = {
+      specVersion: '1.0.0',
+      id: specId,
+      name: providerName,
+      version: '1.0.0',
+      description: `MCP agent at ${mcpUrl.href} with ${tools.length} skill${tools.length === 1 ? '' : 's'}`,
+      provider: { name: providerName, url: origin },
+      endpoint: { url: url, auth: { type: 'none' } },
+      skills,
+      tags: ['mcp'],
+    };
+
+    const outFile = opts.out ?? `${agentSlug || 'agent'}.pactspec.json`;
+    writeFileSync(resolve(outFile), JSON.stringify(spec, null, 2));
+    console.log(pc.green(`✓ Spec written to ${outFile}`));
+    console.log(pc.yellow('\n  ! Review outputSchema for each skill before publishing'));
+    console.log(pc.yellow('  ! MCP does not define output schemas — fill these in manually'));
+
+    // Inline validate
+    const ajv = new Ajv({ strict: false, allErrors: true });
+    addFormats(ajv);
+    const validateFn = ajv.compile(bundledSchema as object);
+    if (validateFn(spec)) {
+      console.log(pc.green(`✓ Spec is valid`));
+    } else {
+      console.log(pc.yellow('\n  Spec has validation issues (fix before publishing):'));
+      for (const e of (validateFn.errors ?? [])) {
+        console.log(pc.yellow(`    ! ${e.instancePath || '/'} ${e.message}`));
+      }
+    }
+
+    if (opts.publish) {
+      if (!opts.agentId) {
+        console.error(pc.red('\n✗ --publish requires --agent-id'));
+        process.exit(1);
+      }
+      console.log(pc.dim(`\nPublishing to ${opts.registry}...`));
+      let pubRes: Response;
+      try {
+        pubRes = await fetch(`${opts.registry}/api/agents`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Agent-ID': opts.agentId },
+          body: JSON.stringify(spec),
+        });
+      } catch (err) {
+        console.error(pc.red(`✗ Network error: ${(err as Error).message}`));
+        process.exit(1);
+      }
+      const pubText = await pubRes.text();
+      let pubData: { agent?: { id: string; spec_id?: string }; error?: string; errors?: string[] } = {};
+      try { pubData = JSON.parse(pubText); } catch { /* non-JSON */ }
+      if (pubRes.ok && pubData.agent) {
+        console.log(pc.green(`✓ Published: ${pubData.agent.spec_id ?? pubData.agent.id}`));
+        console.log(pc.dim(`  ${opts.registry}/agents/${pubData.agent.id}`));
+        console.log(pc.dim(`\nNext: pactspec verify ${specId} <skill-id>`));
+      } else {
+        console.error(pc.red(`✗ Publish failed: ${pubData.error ?? 'Unknown error'}`));
+        if (pubData.errors) for (const e of pubData.errors) console.error(pc.red(`  ${e}`));
+      }
+    } else {
+      console.log(pc.dim(`\nNext steps:`));
+      console.log(pc.dim(`  1. Edit ${outFile} — fill in outputSchema for each skill`));
+      console.log(pc.dim(`  2. pactspec validate ${outFile}`));
+      console.log(pc.dim(`  3. pactspec publish ${outFile} --agent-id <your-org>`));
+    }
+  });
+
 // ─── OpenAPI 3.x → PactSpec converter ────────────────────────────────────────
 
 interface ConvertResult {
@@ -501,6 +809,59 @@ function inferSchema(value: unknown): Record<string, unknown> {
   return { type: typeof value };
 }
 
+function resolveRef(ref: string, doc: Record<string, unknown>): Record<string, unknown> | null {
+  if (!ref.startsWith('#/')) return null;
+  const parts = ref.replace(/^#\//, '').split('/');
+  let node: unknown = doc;
+  for (const part of parts) {
+    if (!isRecord(node)) return null;
+    node = node[part];
+  }
+  return isRecord(node) ? (node as Record<string, unknown>) : null;
+}
+
+function resolveSchema(
+  schema: Record<string, unknown>,
+  doc: Record<string, unknown>,
+  warnings: string[],
+  context: string,
+  seen: Set<string> = new Set()
+): Record<string, unknown> {
+  const ref = schema.$ref;
+  if (typeof ref === 'string') {
+    if (seen.has(ref)) {
+      warnings.push(`${context}: $ref cycle detected (${ref})`);
+      return { type: 'object' };
+    }
+    seen.add(ref);
+    const resolved = resolveRef(ref, doc);
+    if (!resolved) {
+      warnings.push(`${context}: Unresolved $ref ${ref}`);
+      return { type: 'object' };
+    }
+    return resolveSchema(resolved, doc, warnings, context, seen);
+  }
+
+  const out: Record<string, unknown> = { ...schema };
+  if (isRecord(out.properties)) {
+    const props = { ...(out.properties as Record<string, unknown>) };
+    for (const [k, v] of Object.entries(props)) {
+      if (isRecord(v)) props[k] = resolveSchema(v, doc, warnings, context, new Set(seen));
+    }
+    out.properties = props;
+  }
+  if (isRecord(out.items)) {
+    out.items = resolveSchema(out.items as Record<string, unknown>, doc, warnings, context, new Set(seen));
+  }
+  for (const key of ['allOf', 'oneOf', 'anyOf']) {
+    const value = out[key] as unknown;
+    if (Array.isArray(value)) {
+      out[key] = value.map((v) => (isRecord(v) ? resolveSchema(v, doc, warnings, context, new Set(seen)) : v));
+    }
+  }
+  return out;
+}
+
 function slugify(s: string): string {
   return s
     .toLowerCase()
@@ -529,7 +890,7 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
   if (!servers[0]?.url) warnings.push('No servers[0].url found — set endpoint.url manually');
 
   const titleSlug = slugify(rawTitle);
-  const providerSlug = titleSlug.split('-')[0] ?? 'provider';
+  const providerSlug = titleSlug.split('-')[0] || 'provider';
   const agentSlug = titleSlug || 'agent';
   const specId = `urn:pactspec:${providerSlug}:${agentSlug}`;
 
@@ -554,8 +915,8 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
       if (requestBody) {
         const content = requestBody.content as Record<string, unknown> | undefined;
         const jsonContent = (content?.['application/json'] ?? content?.['application/json; charset=utf-8']) as Record<string, unknown> | undefined;
-        if (jsonContent?.schema) {
-          inputSchema = jsonContent.schema as Record<string, unknown>;
+        if (jsonContent?.schema && isRecord(jsonContent.schema)) {
+          inputSchema = resolveSchema(jsonContent.schema as Record<string, unknown>, doc, warnings, `${method.toUpperCase()} ${path} requestBody`);
         } else {
           warnings.push(`${method.toUpperCase()} ${path}: No application/json requestBody — using empty inputSchema`);
         }
@@ -566,7 +927,13 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
           inputSchema = {
             type: 'object',
             properties: Object.fromEntries(
-              params.map((p) => [p.name, (p.schema as Record<string, unknown>) ?? { type: 'string' }])
+              params.map((p) => {
+                const schema = p.schema as Record<string, unknown> | undefined;
+                const resolved = schema && isRecord(schema)
+                  ? resolveSchema(schema, doc, warnings, `${method.toUpperCase()} ${path} parameter ${p.name}`)
+                  : { type: 'string' };
+                return [p.name, resolved];
+              })
             ),
           };
         }
@@ -579,8 +946,8 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
       if (ok) {
         const content = ok.content as Record<string, unknown> | undefined;
         const jsonContent = content?.['application/json'] as Record<string, unknown> | undefined;
-        if (jsonContent?.schema) {
-          outputSchema = jsonContent.schema as Record<string, unknown>;
+        if (jsonContent?.schema && isRecord(jsonContent.schema)) {
+          outputSchema = resolveSchema(jsonContent.schema as Record<string, unknown>, doc, warnings, `${method.toUpperCase()} ${path} response`);
         } else if (jsonContent?.example) {
           // Infer schema from inline example
           outputSchema = inferSchema(jsonContent.example);
@@ -625,6 +992,15 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
     });
   }
 
+  let providerUrl: string | undefined;
+  if (endpointUrl.startsWith('http')) {
+    try {
+      providerUrl = new URL(endpointUrl).origin;
+    } catch {
+      warnings.push('servers[0].url is not a valid absolute URL — provider.url omitted');
+    }
+  }
+
   const spec = {
     specVersion: '1.0.0',
     id: specId,
@@ -633,7 +1009,7 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
     description: description || undefined,
     provider: {
       name: rawTitle,
-      url: endpointUrl.startsWith('http') ? new URL(endpointUrl).origin : undefined,
+      url: providerUrl,
     },
     endpoint: { url: endpointUrl },
     skills,
@@ -661,7 +1037,7 @@ function convertMcp(doc: Record<string, unknown>): ConvertResult {
   if (tools.length === 0) warnings.push('No tools found in MCP manifest — add skills manually');
 
   const titleSlug = slugify(serverName);
-  const providerSlug = titleSlug.split('-')[0] ?? 'provider';
+  const providerSlug = titleSlug.split('-')[0] || 'provider';
   const agentSlug = titleSlug || 'agent';
 
   const skills: Record<string, unknown>[] = tools.map((tool) => {

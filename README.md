@@ -105,11 +105,32 @@ npm install @pactspec/sdk
 
 ```bash
 npm install -g @pactspec/cli
-pactspec init          # scaffold a spec interactively
-pactspec validate my-agent.json
-pactspec test my-agent.json --skill <skill-id>
-pactspec publish my-agent.json
-pactspec verify <agent-id> <skill-id>
+```
+
+**From an MCP server (live endpoint → published spec in 3 commands):**
+```bash
+pactspec from-mcp http://localhost:3000          # fetches tools/list, writes agent.pactspec.json
+pactspec validate agent.pactspec.json            # confirms it's valid
+pactspec publish agent.pactspec.json --agent-id my-org
+```
+
+**From an OpenAPI spec:**
+```bash
+pactspec convert openapi openapi.yaml -o my-agent.pactspec.json
+pactspec validate my-agent.pactspec.json
+pactspec publish my-agent.pactspec.json --agent-id my-org
+```
+
+**One-shot (generate + publish):**
+```bash
+pactspec from-mcp http://localhost:3000 --agent-id my-org --publish
+```
+
+**Other commands:**
+```bash
+pactspec init                               # scaffold a spec interactively
+pactspec test my-agent.json --skill <id>    # run test suite locally
+pactspec verify <urn:pactspec:...> <skill>  # run tests + write attestation
 ```
 
 ## Claude Code Integration
