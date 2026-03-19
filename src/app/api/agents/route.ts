@@ -73,7 +73,13 @@ export async function POST(req: NextRequest) {
   }
 
   const spec = body as AgentSpec;
-  const supabase = createServiceRoleClient();
+
+  let supabase: ReturnType<typeof createServiceRoleClient>;
+  try {
+    supabase = createServiceRoleClient();
+  } catch (err) {
+    return NextResponse.json({ error: 'Service client init failed: ' + String(err) }, { status: 500 });
+  }
 
   const { data: existing, error: existingError } = await supabase
     .from('agents')
@@ -85,8 +91,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: existingError.message }, { status: 500 });
   }
 
-  const shouldResetVerification =
-    existing != null && !specsEqual(existing.spec, spec);
+  let shouldResetVerification = false;
+  try {
+    shouldResetVerification = existing != null && !specsEqual(existing.spec as AgentSpec, spec);
+  } catch (err) {
+    return NextResponse.json({ error: 'specsEqual failed: ' + String(err) }, { status: 500 });
+  }
 
   const upsertPayload: Record<string, unknown> = {
     spec_id: spec.id,
