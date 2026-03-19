@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Schema
             </a>
             <a
-              href="https://github.com/pactspec/pactspec"
+              href="https://github.com/Grumpy254/pactspec"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"
