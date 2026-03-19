@@ -383,7 +383,7 @@ program
     let suite: TestSuiteFile;
     if (opts.suite) {
       try {
-        suite = parseSourceFile(opts.suite) as TestSuiteFile;
+        suite = parseSourceFile(opts.suite) as unknown as TestSuiteFile;
       } catch {
         console.error(pc.red(`✗ Could not read test suite file: ${opts.suite}`));
         process.exit(1);

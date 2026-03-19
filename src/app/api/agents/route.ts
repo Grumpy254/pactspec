@@ -10,16 +10,42 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get('q') ?? '';
   const tagsParam = searchParams.get('tags');
   const verifiedParam = searchParams.get('verified');
+  const pricingModel = searchParams.get('pricing_model');
+  const rawMaxPrice = searchParams.get('max_price');
+  const rawMinPassRate = searchParams.get('min_pass_rate');
 
   const rawLimit = parseInt(searchParams.get('limit') ?? '50', 10);
   const rawOffset = parseInt(searchParams.get('offset') ?? '0', 10);
   const limit = Math.min(Number.isFinite(rawLimit) ? rawLimit : 50, 100);
   const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
 
+  if (pricingModel && !['free', 'per-invocation', 'per-token', 'per-second'].includes(pricingModel)) {
+    return NextResponse.json({ error: 'Invalid pricing_model' }, { status: 400 });
+  }
+
+  let maxPrice: number | null = null;
+  if (rawMaxPrice != null) {
+    const parsed = Number(rawMaxPrice);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return NextResponse.json({ error: 'max_price must be a positive number' }, { status: 400 });
+    }
+    maxPrice = parsed;
+  }
+  let minPassRate: number | null = null;
+  if (rawMinPassRate != null) {
+    const parsed = Number(rawMinPassRate);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+      return NextResponse.json({ error: 'min_pass_rate must be between 0 and 1' }, { status: 400 });
+    }
+    minPassRate = parsed;
+  }
+  const hasPricingFilter = Boolean(pricingModel) || maxPrice != null;
+
   const supabase = await createClient();
   let query = supabase
     .from('agents')
-    .select('*', { count: 'exact' })
+    .select(hasPricingFilter ? '*, skills!inner(*)' : '*', { count: 'exact' })
+    .order('verified', { ascending: false })
     .order('published_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -39,6 +65,15 @@ export async function GET(req: NextRequest) {
   }
   if (verifiedParam === 'true') {
     query = query.eq('verified', true);
+  }
+  if (pricingModel) {
+    query = query.eq('skills.pricing_model', pricingModel);
+  }
+  if (maxPrice != null) {
+    query = query.lte('skills.pricing_amount', maxPrice);
+  }
+  if (minPassRate != null) {
+    query = query.gte('last_validation_pass_rate', minPassRate);
   }
 
   const { data, error, count } = await query;
