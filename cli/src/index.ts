@@ -29,7 +29,8 @@ const program = new Command();
 program
   .name('pactspec')
   .description('Official CLI for the PactSpec protocol')
-  .version('0.1.0');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  .version((require('../package.json') as { version: string }).version);
 
 function parseSourceFile(file: string): Record<string, unknown> {
   const raw = readFileSync(resolve(file), 'utf-8');

@@ -1,6 +1,6 @@
 {
   "name": "@pactspec/cli",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Official CLI for PactSpec — init, validate, publish, verify",
   "bin": {
     "pactspec": "dist/index.js"
