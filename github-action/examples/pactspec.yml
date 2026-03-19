@@ -1,0 +1,45 @@
+# Drop this file into .github/workflows/ in your repo.
+# It validates and tests your PactSpec on every push and PR that touches spec files.
+# On merge to main, it also publishes to the registry and re-runs verification.
+
+name: PactSpec
+
+on:
+  push:
+    paths:
+      - '**/*.pactspec.json'
+  pull_request:
+    paths:
+      - '**/*.pactspec.json'
+
+jobs:
+  validate-and-test:
+    name: Validate & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate and test spec
+        uses: Grumpy254/pactspec/github-action@main
+        with:
+          spec: agents/my-agent.pactspec.json
+          # skill: my-skill-id   # omit to test all skills with a testSuite
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: validate-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to PactSpec registry
+        id: publish
+        uses: Grumpy254/pactspec/github-action@main
+        with:
+          spec: agents/my-agent.pactspec.json
+          publish: 'true'
+          agent-id: ${{ secrets.PACTSPEC_AGENT_ID }}
+
+      - name: Print registry URL
+        run: echo "Published → ${{ steps.publish.outputs.agent-url }}"

@@ -133,6 +133,28 @@ pactspec test my-agent.json --skill <id>    # run test suite locally
 pactspec verify <urn:pactspec:...> <skill>  # run tests + write attestation
 ```
 
+## GitHub Action
+
+Add to `.github/workflows/pactspec.yml`:
+
+```yaml
+- uses: Grumpy254/pactspec/github-action@main
+  with:
+    spec: agents/my-agent.pactspec.json
+```
+
+Validates the spec and runs all test suites on every push and PR that touches `*.pactspec.json` files. Optionally publishes on merge to main:
+
+```yaml
+- uses: Grumpy254/pactspec/github-action@main
+  with:
+    spec: agents/my-agent.pactspec.json
+    publish: 'true'
+    agent-id: ${{ secrets.PACTSPEC_AGENT_ID }}
+```
+
+Full example workflow: [`github-action/examples/pactspec.yml`](github-action/examples/pactspec.yml)
+
 ## Claude Code Integration
 
 Two slash commands are included for publishing PactSpecs without leaving your editor.

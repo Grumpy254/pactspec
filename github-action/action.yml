@@ -1,0 +1,110 @@
+name: 'PactSpec'
+description: 'Validate, test, and optionally publish PactSpec agent specs in CI'
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  spec:
+    description: 'Path to the .pactspec.json file'
+    required: true
+  skill:
+    description: 'Skill ID to run tests for. Omit to test all skills that have a testSuite.'
+    required: false
+    default: ''
+  publish:
+    description: 'Publish to the registry after passing validation and tests'
+    required: false
+    default: 'false'
+  agent-id:
+    description: 'Your agent identifier (X-Agent-ID header). Required when publish: true.'
+    required: false
+    default: ''
+  registry:
+    description: 'PactSpec registry URL'
+    required: false
+    default: 'https://pactspec.dev'
+  cli-version:
+    description: 'Version of @pactspec/cli to install'
+    required: false
+    default: 'latest'
+
+outputs:
+  valid:
+    description: 'Whether the spec passed schema validation (true/false)'
+    value: ${{ steps.validate.outputs.valid }}
+  published:
+    description: 'Whether the spec was published to the registry (true/false)'
+    value: ${{ steps.publish.outputs.published }}
+  agent-url:
+    description: 'Registry URL of the published agent (if publish: true succeeded)'
+    value: ${{ steps.publish.outputs.agent-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install @pactspec/cli
+      shell: bash
+      run: npm install -g @pactspec/cli@${{ inputs.cli-version }}
+
+    - name: Validate spec
+      id: validate
+      shell: bash
+      run: |
+        if pactspec validate "${{ inputs.spec }}"; then
+          echo "valid=true" >> $GITHUB_OUTPUT
+        else
+          echo "valid=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+    - name: Run test suite
+      shell: bash
+      run: |
+        SPEC="${{ inputs.spec }}"
+        SKILL="${{ inputs.skill }}"
+
+        if [ -n "$SKILL" ]; then
+          pactspec test "$SPEC" --skill "$SKILL"
+        else
+          # Extract all skill IDs from the spec and run each
+          SKILLS=$(node -e "
+            const s = JSON.parse(require('fs').readFileSync('$SPEC','utf8'));
+            const ids = s.skills
+              .filter(sk => sk.testSuite && sk.testSuite.url)
+              .map(sk => sk.id);
+            console.log(ids.join(' '));
+          " 2>/dev/null)
+
+          if [ -z "$SKILLS" ]; then
+            echo "No skills with testSuite.url found — skipping test run"
+            exit 0
+          fi
+
+          FAILED=0
+          for SKILL_ID in $SKILLS; do
+            echo "Testing skill: $SKILL_ID"
+            pactspec test "$SPEC" --skill "$SKILL_ID" || FAILED=1
+          done
+          exit $FAILED
+        fi
+
+    - name: Publish to registry
+      id: publish
+      if: inputs.publish == 'true'
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.agent-id }}" ]; then
+          echo "::error::publish: true requires agent-id to be set"
+          exit 1
+        fi
+
+        OUTPUT=$(pactspec publish "${{ inputs.spec }}" \
+          --agent-id "${{ inputs.agent-id }}" \
+          --registry "${{ inputs.registry }}" 2>&1)
+        echo "$OUTPUT"
+
+        # Extract registry URL from CLI output
+        URL=$(echo "$OUTPUT" | grep -oE 'https://[^ ]+/agents/[^ ]+' | head -1)
+        echo "published=true" >> $GITHUB_OUTPUT
+        echo "agent-url=$URL" >> $GITHUB_OUTPUT
