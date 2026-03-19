@@ -7,7 +7,7 @@ import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { parse as parseYaml } from 'yaml';
 // Bundled schema — always available regardless of install location
-import bundledSchema from '../../src/lib/schema/agent-spec.v1.json';
+import bundledSchema from './schema.json';
 
 // ── Types used by the test runner ─────────────────────────────────────────────
 interface TestCase {
