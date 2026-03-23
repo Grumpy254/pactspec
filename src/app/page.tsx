@@ -205,20 +205,20 @@ export default function RegistryPage() {
           Open Protocol · v1.0.0
         </div>
         <h1 className="text-5xl sm:text-6xl font-bold text-white mb-5 tracking-tight leading-tight">
-          The trust layer<br />
-          <span className="text-indigo-400">for AI agents.</span>
+          Know if your AI agent<br />
+          <span className="text-indigo-400">actually works.</span>
         </h1>
         <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-8">
-          Before your orchestrator invokes an agent, it needs to know the agent works, what it costs,
-          and who built it. PactSpec is an open standard for declaring, verifying, pricing, and
-          discovering AI agent capabilities.
+          PactSpec runs tests against your live agent endpoint, scores it against domain-specific
+          benchmarks, and tracks quality over time. When it breaks, you know before your users do.
+          When it&apos;s good, you can prove it.
         </p>
         <div className="flex justify-center gap-3 flex-wrap">
           <a
             href="/publish"
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
           >
-            Publish your agent
+            Test your agent
           </a>
           <a
             href="/demo"
@@ -253,36 +253,38 @@ export default function RegistryPage() {
 
       {/* Three pillars */}
       <div className="grid md:grid-cols-3 gap-4 mb-14">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <div className="text-emerald-400 text-sm font-semibold mb-2 uppercase tracking-wide">Verified</div>
+        <div className="bg-gray-900 border border-emerald-900/40 rounded-xl p-6">
+          <div className="text-emerald-400 text-sm font-semibold mb-2 uppercase tracking-wide">Test</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-4">
-            Every agent runs a test suite against its live endpoint. Pass rates, benchmark scores, and tamper-evident attestation records — not just &quot;it responds.&quot;
+            Run your test suite against the live endpoint. Score against domain-specific benchmarks with known correct answers. Not &quot;it responds&quot; — it got the right answer.
           </p>
           <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400">
-            <span className="text-emerald-400">✓</span> 94.7% on ICD-11 Medical Coding Benchmark<br />
-            <span className="text-emerald-400">✓</span> Attestation: <span className="text-gray-600">sha256:a3f8c...</span>
+            <span className="text-emerald-400">✓</span> 94.7% on ICD-11 Medical Coding<br />
+            <span className="text-emerald-400">✓</span> 86.7% on Security Vulnerability Scan<br />
+            <span className="text-yellow-400">!</span> 70.0% on API Response Quality
           </div>
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <div className="text-violet-400 text-sm font-semibold mb-2 uppercase tracking-wide">Priced</div>
+        <div className="bg-gray-900 border border-violet-900/40 rounded-xl p-6">
+          <div className="text-violet-400 text-sm font-semibold mb-2 uppercase tracking-wide">Price</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-4">
-            Agents declare what they cost. Per-invocation, per-token, or per-second — with built-in support for Stripe and on-chain micropayments via x402.
+            Declare what your agent costs. The registry verifies the price matches what the endpoint actually charges. Consumers know the cost before they call.
           </p>
           <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400 leading-relaxed">
             <span className="text-violet-300">0.05 USD</span>/invocation via <span className="text-indigo-300">stripe</span><br />
-            <span className="text-violet-300">0.001 USDC</span>/invocation via <span className="text-indigo-300">x402</span>
+            <span className="text-emerald-400">✓</span> Pricing verified against live endpoint
           </div>
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <div className="text-indigo-400 text-sm font-semibold mb-2 uppercase tracking-wide">Discoverable</div>
+        <div className="bg-gray-900 border border-indigo-900/40 rounded-xl p-6">
+          <div className="text-indigo-400 text-sm font-semibold mb-2 uppercase tracking-wide">Discover</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-4">
-            One registry, machine-readable. Orchestrators search by capability, price, and quality score — then invoke and pay automatically. No manual vetting.
+            Agents that pass get listed in the open registry. Search by capability, filter by quality score and price. Compare agents that do the same thing.
           </p>
           <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400">
-            <span className="text-gray-600">$</span> pactspec publish agent.json<br />
-            <span className="text-emerald-400">✓</span> Published · <span className="text-gray-500">pactspec.dev/agents/...</span>
+            <span className="text-gray-600">$</span> pactspec test agent.json<br />
+            <span className="text-emerald-400">✓</span> 4/4 tests passed<br />
+            <span className="text-gray-600">$</span> pactspec publish agent.json
           </div>
         </div>
       </div>
