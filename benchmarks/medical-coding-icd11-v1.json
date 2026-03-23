@@ -1,0 +1,414 @@
+{
+  "version": "1.0",
+  "benchmark": "medical-coding-icd11-v1",
+  "name": "ICD-11 Medical Coding Benchmark v1",
+  "description": "Tests accuracy of medical coding agents against 20 clinical scenarios with known ICD-11 codes. Codes are real (sourced from WHO ICD-11); clinical notes are synthetic.",
+  "domain": "medical-coding",
+  "publisher": "PactSpec",
+  "skill": "medical-coding",
+  "source": "synthetic",
+  "sourceDescription": "ICD-11 codes from WHO International Classification of Diseases 11th Revision. Clinical note scenarios are synthetic, written to match each code's diagnostic criteria.",
+  "sourceUrl": "https://icd.who.int/en",
+  "tests": [
+    {
+      "id": "icd11-001",
+      "description": "Tension-type headache",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "Patient presents with bilateral pressing headache of moderate intensity lasting several hours. No nausea, vomiting, or photophobia reported. Pain is described as a tight band around the head, worsened by stress at work."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "8A80.0" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-002",
+      "description": "Acute myocardial infarction",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "62-year-old male presenting to the emergency department with acute onset crushing substernal chest pain radiating to the left arm, diaphoresis, and shortness of breath for the past 45 minutes. ECG shows ST-elevation in leads II, III, and aVF, and troponin I is markedly elevated at 8.2 ng/mL."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "BA00" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-003",
+      "description": "Type 2 diabetes mellitus",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "55-year-old obese female with polyuria, polydipsia, and fatigue over the past three months. Fasting blood glucose is 11.8 mmol/L and HbA1c is 8.4%. No ketonuria detected; C-peptide level is within normal range, consistent with type 2 diabetes."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "CA40" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-004",
+      "description": "Iron deficiency anaemia",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "34-year-old female presents with progressive fatigue, pallor, and exertional dyspnoea over the past two months. She reports heavy menstrual bleeding. Lab results show haemoglobin 8.2 g/dL, MCV 68 fL, ferritin 4 ng/mL, and low serum iron with elevated TIBC."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "DB90.0" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-005",
+      "description": "Osteoarthritis of the knee",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "68-year-old male with chronic right knee pain that worsens with weight bearing and prolonged walking, improving with rest. Physical exam reveals crepitus, bony enlargement, and reduced range of motion. X-ray demonstrates joint space narrowing and marginal osteophytes of the right knee."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "FA24.0" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-006",
+      "description": "Low back pain",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "42-year-old warehouse worker presents with a three-week history of dull, aching low back pain localised to the lumbar region without radiation to the legs. No red flag symptoms, neurological deficits, or bowel/bladder dysfunction. Pain is aggravated by prolonged sitting and bending."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "MD81" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-007",
+      "description": "Streptococcal pharyngitis",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "8-year-old child with acute onset sore throat, odynophagia, and fever of 39.2 degrees Celsius for two days. Examination reveals tonsillar exudates, tender anterior cervical lymphadenopathy, and absence of cough or rhinorrhoea. Rapid streptococcal antigen test is positive for Group A Streptococcus."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "1A07.1" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-008",
+      "description": "Essential hypertension",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "51-year-old male found to have persistently elevated blood pressure on three separate office visits, averaging 158/96 mmHg. He is asymptomatic with no evidence of end-organ damage. Secondary causes of hypertension have been excluded through appropriate workup."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "BA80" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-009",
+      "description": "Fracture of the distal radius",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "73-year-old female presents to the emergency department after a fall onto an outstretched hand. She has significant swelling, tenderness, and a dinner-fork deformity of the right wrist. Radiograph confirms a dorsally displaced fracture of the distal radius with an intact ulna."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "FB81.2" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-010",
+      "description": "Type 1 diabetes mellitus",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "14-year-old boy brought in by parents with a two-week history of weight loss, excessive thirst, frequent urination, and fatigue. Blood glucose is 24.6 mmol/L with ketonuria and a pH of 7.28. Anti-GAD and anti-islet cell antibodies are positive, confirming autoimmune type 1 diabetes."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "CA01" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-011",
+      "description": "Urinary tract infection",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "28-year-old female presents with a three-day history of dysuria, urinary frequency, urgency, and suprapubic discomfort. She denies flank pain, fever, or vaginal discharge. Urine dipstick is positive for nitrites and leucocyte esterase, and midstream urine culture grows E. coli at greater than 10^5 CFU/mL."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "1C62.0" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-012",
+      "description": "Hypothyroidism",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "47-year-old female reports progressive fatigue, weight gain, constipation, cold intolerance, and dry skin over the past six months. Thyroid exam reveals a small, firm, non-tender gland. TSH is elevated at 14.8 mIU/L with a low free T4 of 0.5 ng/dL; anti-TPO antibodies are markedly positive."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "CB41.0" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-013",
+      "description": "Major depressive disorder",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "36-year-old male presents with persistent low mood, anhedonia, insomnia, poor concentration, and significant fatigue lasting over eight weeks. He reports feelings of worthlessness and passive suicidal ideation without plan or intent. PHQ-9 score is 19, indicating severe depression."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "6A70" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-014",
+      "description": "Rheumatoid arthritis",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "44-year-old female presents with symmetrical pain, swelling, and morning stiffness lasting over one hour in the metacarpophalangeal and proximal interphalangeal joints of both hands for the past four months. Rheumatoid factor is positive at 128 IU/mL, anti-CCP antibodies are elevated, and ESR is 48 mm/hr."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "FA01.0" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-015",
+      "description": "Asthma",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "22-year-old male with recurrent episodes of wheezing, chest tightness, dry cough, and shortness of breath, particularly at night and after exercise over the past year. Spirometry shows FEV1 of 72% predicted with a 15% improvement post-bronchodilator. He has a personal history of eczema and allergic rhinitis."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "BD11" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-016",
+      "description": "Migraine without aura",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "30-year-old female presents with recurrent unilateral throbbing headaches lasting 8-24 hours, associated with nausea, photophobia, and phonophobia. She reports at least five similar episodes over the past three months, often triggered by stress and menstruation. No visual or sensory aura precedes the attacks."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "8B11" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-017",
+      "description": "Gastro-oesophageal reflux disease",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "48-year-old male with a six-month history of heartburn and acid regurgitation occurring at least three times per week, worsening after meals and when lying down. He denies dysphagia, weight loss, or GI bleeding. Upper endoscopy reveals non-erosive reflux changes at the gastro-oesophageal junction."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "DA94.1" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-018",
+      "description": "Community-acquired pneumonia",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "58-year-old male presents with a five-day history of productive cough with purulent sputum, fever of 38.9 degrees Celsius, rigors, and pleuritic chest pain on the right side. Chest X-ray shows right lower lobe consolidation with air bronchograms. WBC count is 16,200 per microlitre with a left shift."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "1F24" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-019",
+      "description": "Acute appendicitis",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "19-year-old male presents with periumbilical pain that migrated to the right iliac fossa over the past 18 hours, accompanied by nausea, anorexia, and low-grade fever of 38.1 degrees Celsius. Examination reveals rebound tenderness and guarding at McBurney's point. CT abdomen shows a dilated, fluid-filled appendix with periappendiceal fat stranding."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "KB21.1" }
+          }
+        }
+      }
+    },
+    {
+      "id": "icd11-020",
+      "description": "Breast cancer, not otherwise specified",
+      "request": {
+        "method": "POST",
+        "body": {
+          "clinicalNote": "56-year-old postmenopausal female referred after screening mammography revealed a 2.3 cm spiculated mass in the upper outer quadrant of the left breast. Ultrasound-guided core biopsy confirms invasive carcinoma with no specific histological subtype determined. Axillary lymph nodes are clinically impalpable."
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["icdCode"],
+          "properties": {
+            "icdCode": { "const": "2C82" }
+          }
+        }
+      }
+    }
+  ]
+}

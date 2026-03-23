@@ -1,0 +1,16 @@
+{
+  "_comment": "Must be rejected: skill is missing the required 'name' field",
+  "_expectedError": "required",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:test:missing-skill-name",
+  "name": "Missing Skill Name Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "nameless-skill",
+    "description": "This skill has no name field.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" }
+  }]
+}

@@ -1,0 +1,18 @@
+{
+  "_comment": "Must be rejected: pricing.protocol 'paypal' is not in the allowed enum (x402, stripe, none)",
+  "_expectedError": "enum",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:test:bad-protocol",
+  "name": "Bad Protocol Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "A skill with an unsupported payment protocol.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" },
+    "pricing": { "model": "per-invocation", "amount": 1.00, "currency": "USD", "protocol": "paypal" }
+  }]
+}

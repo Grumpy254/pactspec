@@ -1,0 +1,18 @@
+{
+  "_comment": "Must be rejected: pricing.model 'hourly' is not in the allowed enum",
+  "_expectedError": "enum",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:test:bad-model",
+  "name": "Bad Pricing Model Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "A skill with an invalid pricing model.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" },
+    "pricing": { "model": "hourly", "amount": 10.00, "currency": "USD" }
+  }]
+}

@@ -1,0 +1,17 @@
+{
+  "_comment": "Must be rejected: provider object is missing the required 'name' field",
+  "_expectedError": "required",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:test:missing-provider-name",
+  "name": "Missing Provider Name Agent",
+  "version": "1.0.0",
+  "provider": { "url": "https://anonymous.example.com" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "A valid skill on an agent with no provider name.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" }
+  }]
+}

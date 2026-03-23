@@ -1,0 +1,295 @@
+{
+  "version": "1.0",
+  "benchmark": "schema-validation-v1",
+  "name": "JSON Schema Validation Benchmark v1",
+  "description": "Tests schema validation agents with 10 scenarios covering required fields, type checking, enums, patterns, arrays, and nested objects.",
+  "domain": "schema-validation",
+  "publisher": "PactSpec",
+  "skill": "validate-schema",
+  "source": "synthetic",
+  "sourceDescription": "All schemas and test data are synthetic. Validation rules follow JSON Schema Draft 2020-12 specification.",
+  "sourceUrl": "https://json-schema.org/draft/2020-12/json-schema-core",
+  "tests": [
+    {
+      "id": "sv-001",
+      "description": "Valid simple object passes validation",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" }
+            }
+          },
+          "data": { "name": "Alice" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": true }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-002",
+      "description": "Missing required field fails validation",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "required": ["name", "email"],
+            "properties": {
+              "name": { "type": "string" },
+              "email": { "type": "string", "format": "email" }
+            }
+          },
+          "data": { "name": "Bob" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": false }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-003",
+      "description": "Wrong type fails validation",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "age": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "data": { "age": "twenty-five" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": false }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-004",
+      "description": "Nested object with correct types passes",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "required": ["user"],
+            "properties": {
+              "user": {
+                "type": "object",
+                "required": ["id", "active"],
+                "properties": {
+                  "id": { "type": "integer" },
+                  "active": { "type": "boolean" }
+                }
+              }
+            }
+          },
+          "data": { "user": { "id": 42, "active": true } }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": true }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-005",
+      "description": "Array validation with minItems",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            }
+          },
+          "data": { "tags": [] }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": false }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-006",
+      "description": "Enum value validation — correct value",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string", "enum": ["active", "inactive", "suspended"] }
+            }
+          },
+          "data": { "status": "active" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": true }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-007",
+      "description": "Enum value validation — incorrect value",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string", "enum": ["active", "inactive", "suspended"] }
+            }
+          },
+          "data": { "status": "deleted" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": false }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-008",
+      "description": "Pattern validation with regex",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "zipCode": { "type": "string", "pattern": "^[0-9]{5}$" }
+            }
+          },
+          "data": { "zipCode": "90210" }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": true }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-009",
+      "description": "Returns errors array on failure",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "required": ["x"],
+            "properties": {
+              "x": { "type": "number" }
+            }
+          },
+          "data": {}
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid", "errors"],
+          "properties": {
+            "valid": { "type": "boolean", "const": false },
+            "errors": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sv-010",
+      "description": "Empty object passes schema with no required fields",
+      "request": {
+        "method": "POST",
+        "body": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "optional": { "type": "string" }
+            }
+          },
+          "data": {}
+        }
+      },
+      "expect": {
+        "status": 200,
+        "outputSchema": {
+          "type": "object",
+          "required": ["valid"],
+          "properties": {
+            "valid": { "type": "boolean", "const": true }
+          }
+        }
+      }
+    }
+  ]
+}

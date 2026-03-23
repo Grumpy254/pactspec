@@ -1,9 +1,19 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import type { AgentRow, AgentSpecSkill } from '@/types/agent-spec';
 
-function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string }) {
+interface PricingVerifyResult {
+  skillId: string;
+  protocol: string;
+  declared: { amount: number; currency: string };
+  actual: { amount?: string; currency?: string } | null;
+  match: boolean;
+  status: 'VERIFIED' | 'MISMATCH' | 'ERROR' | 'SKIPPED';
+  error?: string;
+}
+
+function SkillPanel({ skill, agentId, pricingResult }: { skill: AgentSpecSkill; agentId: string; pricingResult?: PricingVerifyResult }) {
   const [validating, setValidating] = useState(false);
   const [result, setResult] = useState<{ status: string; attestationHash?: string; error?: string } | null>(null);
 
@@ -57,9 +67,27 @@ function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string
                 <span className="text-gray-500 ml-1">via {skill.pricing.protocol}</span>
               )}
             </p>
+            {pricingResult && (
+              <span
+                className={`inline-block mt-1 text-xs px-2 py-0.5 rounded ${
+                  pricingResult.status === 'VERIFIED'
+                    ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-800'
+                    : pricingResult.status === 'SKIPPED'
+                    ? 'bg-gray-800 text-gray-500'
+                    : 'bg-red-900/50 text-red-400 border border-red-800'
+                }`}
+                title={pricingResult.error ?? ''}
+              >
+                {pricingResult.status === 'VERIFIED'
+                  ? 'Pricing verified'
+                  : pricingResult.status === 'SKIPPED'
+                  ? 'Pricing unverified'
+                  : 'Pricing unverified'}
+              </span>
+            )}
           </div>
         )}
-        {skill.testSuite?.url && (
+        {skill.testSuite?.url && /^https?:\/\//.test(skill.testSuite.url) && (
           <div>
             <span className="text-gray-500 text-xs uppercase tracking-wide">Test Suite</span>
             <a
@@ -122,15 +150,145 @@ function SkillPanel({ skill, agentId }: { skill: AgentSpecSkill; agentId: string
   );
 }
 
+interface BenchmarkResultRow {
+  id: string;
+  benchmark_id: string;
+  agent_id: string;
+  score: number;
+  passed_count: number;
+  total_count: number;
+  attestation_hash?: string;
+  run_at: string;
+  benchmarks: {
+    name: string;
+    domain: string;
+    publisher: string;
+    version: string;
+    test_count: number;
+  };
+}
+
+function BenchmarkResultsSection({ agentId }: { agentId: string }) {
+  const [results, setResults] = useState<BenchmarkResultRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [rerunning, setRerunning] = useState<string | null>(null);
+
+  const fetchResults = useCallback(() => {
+    fetch(`/api/benchmarks/results?agentId=${agentId}`)
+      .then((r) => r.json())
+      .then((d) => setResults(d.results ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [agentId]);
+
+  useEffect(() => { fetchResults(); }, [fetchResults]);
+
+  async function rerun(benchmarkId: string) {
+    setRerunning(benchmarkId);
+    try {
+      await fetch(`/api/benchmarks/${benchmarkId}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId }),
+      });
+      fetchResults();
+    } catch {
+      // ignore
+    } finally {
+      setRerunning(null);
+    }
+  }
+
+  function scoreColor(score: number): string {
+    if (score >= 0.8) return 'text-emerald-400';
+    if (score >= 0.5) return 'text-yellow-400';
+    return 'text-red-400';
+  }
+
+  function barColor(score: number): string {
+    if (score >= 0.8) return 'bg-emerald-500';
+    if (score >= 0.5) return 'bg-yellow-500';
+    return 'bg-red-500';
+  }
+
+  if (loading) return null;
+
+  return (
+    <div className="mb-10">
+      <h2 className="text-xl font-semibold text-white mb-4">Benchmark Results</h2>
+      {results.length === 0 ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
+          <p className="text-gray-500 mb-2">No benchmarks run yet</p>
+          <a
+            href="/benchmarks"
+            className="text-indigo-400 hover:text-indigo-300 text-sm underline"
+          >
+            Browse available benchmarks
+          </a>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {results.map((r) => (
+            <div key={r.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="font-semibold text-white text-sm">{r.benchmarks.name}</h3>
+                  <span className="text-xs text-gray-500">{r.benchmarks.domain}</span>
+                </div>
+                <span className={`text-2xl font-bold font-mono ${scoreColor(r.score)}`}>
+                  {(r.score * 100).toFixed(1)}%
+                </span>
+              </div>
+
+              {/* Score bar */}
+              <div className="w-full bg-gray-800 rounded-full h-2 mb-3">
+                <div
+                  className={`h-2 rounded-full transition-all ${barColor(r.score)}`}
+                  style={{ width: `${Math.max(r.score * 100, 1)}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>
+                  {r.passed_count}/{r.total_count} tests passed
+                </span>
+                <span>by {r.benchmarks.publisher}</span>
+              </div>
+
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-xs text-gray-600">
+                  {new Date(r.run_at).toLocaleDateString()}
+                </span>
+                <button
+                  onClick={() => rerun(r.benchmark_id)}
+                  disabled={rerunning === r.benchmark_id}
+                  className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1 rounded-lg transition-colors"
+                >
+                  {rerunning === r.benchmark_id ? 'Running...' : 'Re-run'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [agent, setAgent] = useState<AgentRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [verifyingPricing, setVerifyingPricing] = useState(false);
+  const [pricingResults, setPricingResults] = useState<PricingVerifyResult[]>([]);
 
   useEffect(() => {
     fetch(`/api/agents/${id}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => {
         if (d.agent) setAgent(d.agent);
         else setError(d.error ?? 'Not found');
@@ -138,6 +296,28 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
       .catch(() => setError('Failed to load agent'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const hasPricedSkills = (agent?.spec?.skills ?? []).some(
+    (s) => s.pricing && s.pricing.protocol && s.pricing.protocol !== 'none' && s.pricing.model !== 'free'
+  );
+
+  async function triggerPricingVerify() {
+    if (!agent) return;
+    setVerifyingPricing(true);
+    setPricingResults([]);
+    try {
+      const res = await fetch(`/api/agents/${agent.id}/verify-pricing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.results) setPricingResults(data.results);
+    } catch {
+      // silently fail — no results shown
+    } finally {
+      setVerifyingPricing(false);
+    }
+  }
 
   if (loading) return <div className="text-center text-gray-500 py-20">Loading...</div>;
   if (error || !agent) {
@@ -172,7 +352,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <div className="text-xs text-gray-500 mb-1">Provider</div>
           <div className="text-sm text-white font-medium">{agent.provider_name}</div>
-          {agent.provider_url && (
+          {agent.provider_url && /^https?:\/\//.test(agent.provider_url) && (
             <a href={agent.provider_url} target="_blank" rel="noopener noreferrer"
               className="text-xs text-indigo-400 underline mt-0.5 block truncate">
               {agent.provider_url}
@@ -214,10 +394,41 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
+      {/* Delegation */}
+      {agent.spec?.delegation?.delegatedFrom && (
+        <div className="bg-gray-900 border border-cyan-900 rounded-xl p-4 mb-8 flex items-start gap-3">
+          <div className="shrink-0 w-2 h-2 rounded-full bg-cyan-400 mt-1.5" />
+          <div className="min-w-0">
+            <p className="text-sm text-cyan-400 font-medium mb-1">Delegated Agent</p>
+            <p className="text-sm text-gray-300">
+              Delegates from:{' '}
+              <span className="font-mono text-xs text-cyan-300 break-all">
+                {agent.spec.delegation.delegatedFrom}
+              </span>
+            </p>
+            {agent.spec.delegation.revenueShare && (
+              <p className="text-xs text-gray-400 mt-1">
+                Revenue share: {agent.spec.delegation.revenueShare.upstream}% upstream / {agent.spec.delegation.revenueShare.downstream}% this agent
+              </p>
+            )}
+            {agent.spec.delegation.terms && /^https?:\/\//.test(agent.spec.delegation.terms) && (
+              <a
+                href={agent.spec.delegation.terms}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-cyan-400 underline mt-1 inline-block"
+              >
+                Delegation terms
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Tags */}
-      {agent.tags.length > 0 && (
+      {(agent.tags ?? []).length > 0 && (
         <div className="flex gap-2 flex-wrap mb-8">
-          {agent.tags.map((tag) => (
+          {(agent.tags ?? []).map((tag) => (
             <span key={tag} className="text-xs bg-gray-800 text-gray-400 px-3 py-1 rounded-full">
               {tag}
             </span>
@@ -226,12 +437,31 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* Skills */}
-      <h2 className="text-xl font-semibold text-white mb-4">Skills</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-white">Skills</h2>
+        {hasPricedSkills && (
+          <button
+            onClick={triggerPricingVerify}
+            disabled={verifyingPricing}
+            className="text-xs bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg transition-colors"
+          >
+            {verifyingPricing ? 'Verifying...' : 'Verify Pricing'}
+          </button>
+        )}
+      </div>
       <div className="space-y-4 mb-10">
-        {agent.spec.skills.map((skill) => (
-          <SkillPanel key={skill.id} skill={skill} agentId={agent.id} />
+        {(agent.spec?.skills ?? []).map((skill) => (
+          <SkillPanel
+            key={skill.id}
+            skill={skill}
+            agentId={agent.id}
+            pricingResult={pricingResults.find((r) => r.skillId === skill.id)}
+          />
         ))}
       </div>
+
+      {/* Benchmark Results */}
+      <BenchmarkResultsSection agentId={agent.id} />
 
       {/* Raw spec */}
       <details>

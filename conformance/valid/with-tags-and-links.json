@@ -1,0 +1,53 @@
+{
+  "_comment": "Spec with top-level tags array and links object",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:insightai:market-signals",
+  "name": "Market Signal Detector",
+  "version": "1.3.0",
+  "description": "Identifies trading signals from financial news and social media.",
+  "provider": {
+    "name": "InsightAI",
+    "url": "https://insightai.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.insightai.example.com/signals"
+  },
+  "skills": [{
+    "id": "detect-signals",
+    "name": "Detect Market Signals",
+    "description": "Analyzes a batch of headlines and returns detected trading signals.",
+    "tags": ["finance", "nlp", "signals"],
+    "inputSchema": {
+      "type": "object",
+      "required": ["headlines"],
+      "properties": {
+        "headlines": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["signals"],
+      "properties": {
+        "signals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ticker": { "type": "string" },
+              "direction": { "type": "string", "enum": ["bullish", "bearish", "neutral"] },
+              "confidence": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }],
+  "tags": ["finance", "market-data", "nlp", "signals"],
+  "links": {
+    "documentation": "https://insightai.example.com/docs/market-signals",
+    "repository": "https://github.com/insightai/market-signals"
+  }
+}

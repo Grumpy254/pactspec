@@ -1,3 +1,5 @@
+"""Offline PactSpec validation against the canonical v1 JSON schema."""
+
 import json
 import os
 from dataclasses import dataclass, field
@@ -12,6 +14,7 @@ _validator: Any = None
 
 
 def _get_validator() -> Draft202012Validator:
+    """Load and cache the JSON schema validator (singleton)."""
     global _schema, _validator
     if _validator is None:
         with open(_SCHEMA_PATH, "r", encoding="utf-8") as f:
@@ -22,24 +25,32 @@ def _get_validator() -> Draft202012Validator:
 
 @dataclass
 class ValidateResult:
+    """Result of validating a spec against the PactSpec v1 schema.
+
+    Attributes:
+        valid: True if the spec passes validation.
+        errors: List of human-readable error strings (empty when valid).
+    """
+
     valid: bool
     errors: List[str] = field(default_factory=list)
 
 
-def validate(spec: Any) -> ValidateResult:
+def validate_spec(spec: Any) -> ValidateResult:
     """Validate a PactSpec document against the canonical v1 schema.
 
-    Synchronous — no network calls.
+    This is the recommended entry point. Synchronous, no network calls.
 
     Args:
         spec: The spec document as a dict (or any JSON-serialisable value).
 
     Returns:
-        ValidateResult with valid=True and empty errors list, or
-        valid=False with a list of human-readable error strings.
+        ValidateResult with ``valid=True`` and empty errors list on success,
+        or ``valid=False`` with a list of human-readable error strings.
 
-    Example:
-        result = validate(my_spec)
+    Example::
+
+        result = validate_spec(my_spec)
         if not result.valid:
             for err in result.errors:
                 print(err)
@@ -55,3 +66,7 @@ def validate(spec: Any) -> ValidateResult:
             for e in errors
         ],
     )
+
+
+# Backward-compatible alias
+validate = validate_spec

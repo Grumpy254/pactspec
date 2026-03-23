@@ -1,0 +1,39 @@
+{
+  "pactspec": "1.0",
+  "id": "urn:pactspec:example:medical-coder",
+  "name": "Medical Coding Agent",
+  "version": "1.0.0",
+  "description": "Maps clinical descriptions to ICD-11 codes. Charges $0.05 per invocation via Stripe.",
+  "url": "http://localhost:3001/api/agent",
+  "skills": [
+    {
+      "id": "code-diagnosis",
+      "name": "Code Diagnosis",
+      "description": "Returns an ICD-11 code for a given clinical description",
+      "inputSchema": {
+        "type": "object",
+        "required": ["code_description"],
+        "properties": {
+          "code_description": {
+            "type": "string",
+            "description": "A free-text clinical description (e.g. 'high blood pressure')"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "icd11_code": { "type": "string" },
+          "description": { "type": "string" },
+          "confidence": { "type": "number" }
+        }
+      },
+      "pricing": {
+        "model": "per-invocation",
+        "amount": 0.05,
+        "currency": "USD",
+        "protocol": "stripe"
+      }
+    }
+  ]
+}

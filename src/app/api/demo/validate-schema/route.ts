@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
-const ajv = new Ajv({ strict: false, allErrors: true });
-addFormats(ajv);
-
 export async function POST(req: NextRequest) {
   let body: { schema?: unknown; data?: unknown };
   try {
@@ -19,6 +16,16 @@ export async function POST(req: NextRequest) {
   if (body.data === undefined) {
     return NextResponse.json({ error: '`data` is required' }, { status: 400 });
   }
+
+  // Limit schema size to prevent DoS via pathological schemas
+  const schemaStr = JSON.stringify(body.schema);
+  if (schemaStr.length > 100_000) {
+    return NextResponse.json({ error: 'Schema too large (max 100KB)' }, { status: 400 });
+  }
+
+  // Fresh AJV instance per request to prevent memory accumulation
+  const ajv = new Ajv({ strict: false, allErrors: true });
+  addFormats(ajv);
 
   let validate: ReturnType<typeof ajv.compile>;
   try {

@@ -11,6 +11,7 @@ import type {
   ValidationResult,
 } from '@/types/agent-spec';
 import { generateAttestationHash } from './attestation';
+import type { AuthType } from '@/types/agent-spec';
 
 const ajv = new Ajv({ strict: false });
 addFormats(ajv);
@@ -189,11 +190,33 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
       headers: (options as RequestInit).headers as Record<string, string> | undefined,
       body: (options as RequestInit).body as string | undefined,
       signal: controller.signal,
+      redirect: 'error',
       dispatcher,
     }) as unknown as Response;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Build the error string for a test-result status mismatch,
+ * appending an auth hint when the response is 401/403 and the
+ * endpoint declares a non-'none' auth type.
+ */
+export function buildStatusError(
+  expectedStatus: number,
+  actualStatus: number,
+  authType: AuthType | undefined,
+): string {
+  let error = `Expected status ${expectedStatus}, got ${actualStatus}`;
+  if (
+    (actualStatus === 401 || actualStatus === 403) &&
+    authType &&
+    authType !== 'none'
+  ) {
+    error += ` (endpoint requires '${authType}' auth — ensure test headers include credentials)`;
+  }
+  return error;
 }
 
 export async function runValidation(
@@ -261,16 +284,30 @@ export async function runValidation(
 
   const results: TestResult[] = [];
 
+  // Resolve endpoint auth config once
+  const authType = agent.spec.endpoint?.auth?.type ?? 'none';
+
   for (const test of suite.tests) {
     const startMs = Date.now();
-    const timeoutMs = test.timeoutMs ?? 15_000;
+    const timeoutMs = Math.min(test.timeoutMs ?? 15_000, 30_000);
 
     try {
+      // Build headers: start with defaults + test-case headers, then layer auth
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(test.request.headers ?? {}),
+      };
+
+      // For x-agent-id auth, automatically inject the self-identifying header
+      if (authType === 'x-agent-id') {
+        headers['X-Agent-ID'] = agent.spec_id;
+      }
+
       const res = await fetchWithTimeout(
         agent.endpoint_url,
         {
           method: test.request.method ?? 'POST',
-          headers: { 'Content-Type': 'application/json', ...(test.request.headers ?? {}) },
+          headers,
           body: test.request.body != null ? JSON.stringify(test.request.body) : undefined,
         },
         timeoutMs
@@ -299,14 +336,20 @@ export async function runValidation(
         }
       }
 
+      // Build error message, appending auth hint on 401/403
+      let error: string | undefined;
+      if (!statusOk) {
+        error = buildStatusError(test.expect.status, res.status, authType);
+      } else if (schemaError) {
+        error = schemaError;
+      }
+
       results.push({
         testId: test.id,
         passed: statusOk && schemaOk,
         durationMs,
         statusCode: res.status,
-        error: !statusOk
-          ? `Expected status ${test.expect.status}, got ${res.status}`
-          : schemaError,
+        error,
       });
     } catch (err) {
       const durationMs = Date.now() - startMs;

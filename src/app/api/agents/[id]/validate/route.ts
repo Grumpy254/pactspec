@@ -16,17 +16,23 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  if (!body.skillId) {
-    return NextResponse.json({ error: 'skillId is required' }, { status: 400 });
+  if (typeof body.skillId !== 'string' || !body.skillId.trim()) {
+    return NextResponse.json({ error: 'skillId is required and must be a non-empty string' }, { status: 400 });
   }
 
   const supabase = await createClient();      // reads
   const adminDb = createServiceRoleClient(); // writes
 
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id);
+  let decodedId = id;
+  if (!isUuid) {
+    try { decodedId = decodeURIComponent(id); } catch {
+      return NextResponse.json({ error: 'Invalid agent ID encoding' }, { status: 400 });
+    }
+  }
   const { data: agent, error } = isUuid
     ? await supabase.from('agents').select('*').eq('id', id).single()
-    : await supabase.from('agents').select('*').eq('spec_id', decodeURIComponent(id)).single();
+    : await supabase.from('agents').select('*').eq('spec_id', decodedId).single();
 
   if (error || !agent) {
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
@@ -42,7 +48,7 @@ export async function POST(
   if ((recentRuns ?? 0) > 0) {
     return NextResponse.json(
       { error: 'Rate limit: one validation run per agent per minute' },
-      { status: 429 }
+      { status: 429, headers: { 'Retry-After': '60' } }
     );
   }
 
@@ -69,29 +75,51 @@ export async function POST(
     return NextResponse.json({ error: 'Validation failed unexpectedly' }, { status: 500 });
   }
 
+  const testCount = result.results.length;
+  const passedCount = result.results.filter((r) => r.passed).length;
+  const passRate = testCount > 0 ? passedCount / testCount : null;
+
   // Update run record
-  await adminDb
+  const { error: runUpdateError } = await adminDb
     .from('validation_runs')
     .update({
       status: result.status,
       test_results: result.results,
+      test_count: testCount,
+      passed_count: passedCount,
+      pass_rate: passRate,
       duration_ms: result.durationMs,
       error: result.error ?? null,
       attestation_hash: result.attestationHash ?? null,
+      updated_at: new Date().toISOString(),
     })
     .eq('id', run.id);
+  if (runUpdateError) {
+    console.error('Failed to update validation run:', runUpdateError.message);
+  }
+
+  const now = new Date().toISOString();
+  const agentUpdate: Record<string, unknown> = {
+    last_validation_pass_rate: passRate,
+    last_validation_test_count: testCount,
+    last_validation_at: now,
+    updated_at: now,
+  };
 
   // If passed, mark agent verified
   if (result.status === 'PASSED' && result.attestationHash) {
-    await adminDb
-      .from('agents')
-      .update({
-        verified: true,
-        attestation_hash: result.attestationHash,
-        verified_at: new Date().toISOString(),
-      })
-      .eq('id', agent.id);
+    agentUpdate.verified = true;
+    agentUpdate.attestation_hash = result.attestationHash;
+    agentUpdate.verified_at = now;
   }
+  const { error: agentUpdateError } = await adminDb.from('agents').update(agentUpdate).eq('id', agent.id);
+  if (agentUpdateError) {
+    console.error('Failed to update agent:', agentUpdateError.message);
+  }
+
+  // Prune old validation runs (fire-and-forget with error logging)
+  adminDb.rpc('purge_old_validation_runs', { keep_per_agent: 20, max_age_days: 90 })
+    .then(() => {}, (err) => console.error('Purge failed:', err));
 
   return NextResponse.json({ runId: run.id, ...result });
 }

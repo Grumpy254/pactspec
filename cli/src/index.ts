@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { readFileSync, writeFileSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from 'fs';
 import { resolve, join, extname } from 'path';
 import Ajv from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 // Bundled schema — always available regardless of install location
 import bundledSchema from './schema.json';
 
@@ -49,66 +49,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-async function fetchMcpTools(endpoint: string): Promise<{
-  tools: Record<string, unknown>[];
-  serverName?: string;
-  serverVersion?: string;
-}> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10_000);
-  let res: Response;
-  try {
-    res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'list_tools', params: {} }),
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-
-  const text = await res.text();
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error('Non-JSON response from MCP server');
-  }
-
-  if (!res.ok) {
-    let errMsg = `HTTP ${res.status}`;
-    if (isRecord(data) && isRecord(data.error) && typeof data.error.message === 'string') {
-      errMsg = data.error.message;
-    } else if (isRecord(data) && typeof data.error === 'string') {
-      errMsg = data.error;
-    }
-    throw new Error(errMsg);
-  }
-
-  // Accept both JSON-RPC and simple payloads.
-  const payload = isRecord(data) && data.result !== undefined
-    ? (data.result as unknown)
-    : data;
-
-  const tools =
-    (isRecord(payload) && Array.isArray(payload.tools) ? payload.tools : null) ??
-    (Array.isArray(payload) ? payload : null);
-
-  if (!tools) {
-    throw new Error('list_tools response missing tools[]');
-  }
-
-  const serverName =
-    (isRecord(payload) ? (payload.serverName as string | undefined) ?? (payload.name as string | undefined) : undefined) ??
-    (isRecord(data) ? (data.serverName as string | undefined) ?? (data.name as string | undefined) : undefined);
-  const serverVersion =
-    (isRecord(payload) ? (payload.version as string | undefined) : undefined) ??
-    (isRecord(data) ? (data.version as string | undefined) : undefined);
-
-  return { tools: tools as Record<string, unknown>[], serverName, serverVersion };
-}
-
 // ── validate ─────────────────────────────────────────────────────────────────
 program
   .command('validate <file>')
@@ -147,7 +87,8 @@ program
   .description('Publish a PactSpec JSON file to the registry')
   .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
   .option('-k, --agent-id <id>', 'Your agent identifier (X-Agent-ID header)')
-  .action(async (file: string, opts: { registry: string; agentId?: string }) => {
+  .option('-t, --publish-token <token>', 'Publish token (X-Publish-Token header)')
+  .action(async (file: string, opts: { registry: string; agentId?: string; publishToken?: string }) => {
     let spec: unknown;
     try {
       spec = parseSourceFile(file);
@@ -165,13 +106,16 @@ program
 
     let res: Response;
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Agent-ID': opts.agentId,
+      };
+      if (opts.publishToken) headers['X-Publish-Token'] = opts.publishToken;
       res = await fetch(`${opts.registry}/api/agents`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Agent-ID': opts.agentId,
-        },
+        headers,
         body: JSON.stringify(spec),
+        signal: AbortSignal.timeout(30_000),
       });
     } catch (err) {
       console.error(pc.red(`✗ Network error: ${(err as Error).message}`));
@@ -195,6 +139,168 @@ program
     }
   });
 
+// ── bulk-publish ─────────────────────────────────────────────────────────────
+function collectSpecFiles(dir: string, recursive: boolean): string[] {
+  const results: string[] = [];
+  const entries = readdirSync(dir);
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (recursive && statSync(full).isDirectory()) {
+      results.push(...collectSpecFiles(full, true));
+    } else if (
+      entry.endsWith('.pactspec.json') ||
+      entry.endsWith('.pactspec.yaml')
+    ) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+interface BulkResult {
+  file: string;
+  specId: string | undefined;
+  status: 'published' | 'failed' | 'skipped';
+  error?: string;
+}
+
+program
+  .command('bulk-publish <dir>')
+  .description('Publish all *.pactspec.json / *.pactspec.yaml files in a directory')
+  .option('-r, --recursive', 'Search subdirectories recursively')
+  .option('-k, --agent-id <id>', 'Your agent identifier (X-Agent-ID header)')
+  .option('-t, --publish-token <token>', 'Publish token (X-Publish-Token header)')
+  .option('--registry <url>', 'Registry URL', 'https://pactspec.dev')
+  .option('--dry-run', 'Validate all specs but do not publish')
+  .option('--continue-on-error', 'Do not stop on first failure')
+  .action(async (dir: string, opts: {
+    recursive?: boolean;
+    agentId?: string;
+    publishToken?: string;
+    registry: string;
+    dryRun?: boolean;
+    continueOnError?: boolean;
+  }) => {
+    if (!opts.agentId) {
+      console.error(pc.red('✗ --agent-id is required'));
+      process.exit(1);
+    }
+
+    const resolvedDir = resolve(dir);
+    if (!existsSync(resolvedDir) || !statSync(resolvedDir).isDirectory()) {
+      console.error(pc.red(`✗ Not a directory: ${dir}`));
+      process.exit(1);
+    }
+
+    const files = collectSpecFiles(resolvedDir, !!opts.recursive);
+    if (files.length === 0) {
+      console.error(pc.red(`✗ No *.pactspec.json or *.pactspec.yaml files found in ${dir}`));
+      process.exit(1);
+    }
+
+    console.log(pc.bold(`Publishing ${files.length} spec${files.length === 1 ? '' : 's'} from ${dir}...\n`));
+
+    const ajv = new Ajv({ strict: false, allErrors: true });
+    addFormats(ajv);
+    const validateFn = ajv.compile(bundledSchema as object);
+
+    const results: BulkResult[] = [];
+    let published = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    for (const file of files) {
+      const relPath = file.startsWith(resolvedDir)
+        ? file.slice(resolvedDir.length + 1)
+        : file;
+
+      // 1. Parse
+      let spec: Record<string, unknown>;
+      try {
+        spec = parseSourceFile(file);
+      } catch (err) {
+        const msg = `Parse error: ${(err as Error).message}`;
+        console.log(`  ${pc.red('✗')} ${relPath} → ${pc.red(msg)}`);
+        results.push({ file: relPath, specId: undefined, status: 'failed', error: msg });
+        failed++;
+        if (!opts.continueOnError) break;
+        continue;
+      }
+
+      const specId = (spec.id as string | undefined) ?? '(no id)';
+
+      // 2. Validate
+      const valid = validateFn(spec);
+      if (!valid) {
+        const msgs = (validateFn.errors ?? [])
+          .map((e) => `${e.instancePath || '/'} ${e.message}`)
+          .join('; ');
+        const msg = `Validation failed: ${msgs}`;
+        console.log(`  ${pc.red('✗')} ${relPath} → ${pc.red(msg)}`);
+        results.push({ file: relPath, specId, status: 'failed', error: msg });
+        failed++;
+        if (!opts.continueOnError) break;
+        continue;
+      }
+
+      // 3. Dry-run: skip publishing
+      if (opts.dryRun) {
+        console.log(`  ${pc.green('✓')} ${relPath} → ${specId} ${pc.dim('(dry-run)')}`);
+        results.push({ file: relPath, specId, status: 'skipped' });
+        skipped++;
+        continue;
+      }
+
+      // 4. Publish
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Agent-ID': opts.agentId,
+        };
+        if (opts.publishToken) headers['X-Publish-Token'] = opts.publishToken;
+
+        const res = await fetch(`${opts.registry}/api/agents`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(spec),
+          signal: AbortSignal.timeout(30_000),
+        });
+
+        const text = await res.text();
+        let data: { agent?: { id: string; spec_id?: string }; error?: string; errors?: string[] } = {};
+        try { data = JSON.parse(text); } catch { /* non-JSON */ }
+
+        if (res.ok && data.agent) {
+          const displayId = data.agent.spec_id ?? data.agent.id;
+          console.log(`  ${pc.green('✓')} ${relPath} → ${displayId}`);
+          results.push({ file: relPath, specId: displayId, status: 'published' });
+          published++;
+        } else {
+          const msg = data.error ?? 'Unknown error';
+          console.log(`  ${pc.red('✗')} ${relPath} → ${pc.red(msg)}`);
+          results.push({ file: relPath, specId, status: 'failed', error: msg });
+          failed++;
+          if (!opts.continueOnError) break;
+        }
+      } catch (err) {
+        const msg = `Network error: ${(err as Error).message}`;
+        console.log(`  ${pc.red('✗')} ${relPath} → ${pc.red(msg)}`);
+        results.push({ file: relPath, specId, status: 'failed', error: msg });
+        failed++;
+        if (!opts.continueOnError) break;
+      }
+    }
+
+    console.log('');
+    const parts: string[] = [];
+    if (published > 0 || !opts.dryRun) parts.push(pc.green(`Published: ${published}`));
+    parts.push(failed > 0 ? pc.red(`Failed: ${failed}`) : pc.dim(`Failed: ${failed}`));
+    if (skipped > 0) parts.push(pc.dim(`Skipped: ${skipped}`));
+    console.log(parts.join('  '));
+
+    if (failed > 0) process.exit(1);
+  });
+
 // ── verify ────────────────────────────────────────────────────────────────────
 program
   .command('verify <agent-id> <skill-id>')
@@ -209,6 +315,7 @@ program
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skillId }),
+        signal: AbortSignal.timeout(120_000),
       });
     } catch (err) {
       console.error(pc.red(`✗ Network error: ${(err as Error).message}`));
@@ -220,12 +327,18 @@ program
       process.exit(1);
     }
 
-    const data = await res.json() as {
+    let data: {
       status: string;
       attestationHash?: string;
       error?: string;
       results?: Array<{ testId: string; passed: boolean; durationMs: number; error?: string }>;
     };
+    try {
+      data = await res.json();
+    } catch {
+      console.error(pc.red('✗ Invalid response from registry'));
+      process.exit(1);
+    }
 
     if (data.status === 'PASSED') {
       console.log(pc.green(`✓ Validation PASSED`));
@@ -243,6 +356,167 @@ program
     }
   });
 
+// ── price ────────────────────────────────────────────────────────────────────
+const VALID_PRICING_MODELS = ['free', 'per-invocation', 'per-token', 'per-second'] as const;
+const VALID_CURRENCIES = ['USD', 'USDC', 'SOL'] as const;
+const VALID_PROTOCOLS = ['stripe', 'x402', 'none'] as const;
+
+program
+  .command('price <file>')
+  .description('Update pricing for a skill in a PactSpec file')
+  .requiredOption('-s, --skill <id>', 'Skill ID to update')
+  .requiredOption('-m, --model <model>', 'Pricing model: free, per-invocation, per-token, per-second')
+  .option('-a, --amount <n>', 'Price amount (required for paid models)', parseFloat)
+  .option('-c, --currency <c>', 'Currency: USD, USDC, SOL', 'USD')
+  .option('-p, --protocol <p>', 'Payment protocol: stripe, x402, none')
+  .option('--publish', 'Publish updated spec to registry after updating')
+  .option('-k, --agent-id <id>', 'Your agent identifier (for --publish)')
+  .option('-t, --publish-token <token>', 'Publish token (for --publish)')
+  .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
+  .action(async (file: string, opts: {
+    skill: string;
+    model: string;
+    amount?: number;
+    currency: string;
+    protocol?: string;
+    publish?: boolean;
+    agentId?: string;
+    publishToken?: string;
+    registry: string;
+  }) => {
+    // 1. Validate model
+    if (!(VALID_PRICING_MODELS as readonly string[]).includes(opts.model)) {
+      console.error(pc.red(`✗ Invalid pricing model: ${opts.model}`));
+      console.error(pc.dim(`  Valid models: ${VALID_PRICING_MODELS.join(', ')}`));
+      process.exit(1);
+    }
+
+    // 2. Validate currency
+    const currency = opts.currency.toUpperCase();
+    if (!(VALID_CURRENCIES as readonly string[]).includes(currency)) {
+      console.error(pc.red(`✗ Invalid currency: ${opts.currency}`));
+      console.error(pc.dim(`  Valid currencies: ${VALID_CURRENCIES.join(', ')}`));
+      process.exit(1);
+    }
+
+    // 3. Validate protocol
+    if (opts.protocol && !(VALID_PROTOCOLS as readonly string[]).includes(opts.protocol)) {
+      console.error(pc.red(`✗ Invalid protocol: ${opts.protocol}`));
+      console.error(pc.dim(`  Valid protocols: ${VALID_PROTOCOLS.join(', ')}`));
+      process.exit(1);
+    }
+
+    // 4. Validate amount for paid models
+    if (opts.model !== 'free') {
+      if (opts.amount === undefined || isNaN(opts.amount)) {
+        console.error(pc.red(`✗ --amount is required for paid model "${opts.model}"`));
+        process.exit(1);
+      }
+      if (opts.amount <= 0) {
+        console.error(pc.red(`✗ Amount must be positive, got ${opts.amount}`));
+        process.exit(1);
+      }
+    }
+
+    // 5. Read and parse spec
+    let spec: Record<string, unknown>;
+    try {
+      spec = parseSourceFile(file);
+    } catch {
+      console.error(pc.red(`✗ Could not read or parse ${file}`));
+      process.exit(1);
+    }
+
+    // 6. Find skill
+    const skills = (spec.skills as Array<Record<string, unknown>> | undefined) ?? [];
+    const skill = skills.find((s) => s.id === opts.skill);
+    if (!skill) {
+      console.error(pc.red(`✗ Skill "${opts.skill}" not found in spec`));
+      console.error(pc.dim(`  Available skills: ${skills.map((s) => s.id).join(', ')}`));
+      process.exit(1);
+    }
+
+    // 7. Build pricing object
+    const pricing: Record<string, unknown> = {
+      model: opts.model,
+      amount: opts.model === 'free' ? 0 : opts.amount,
+      currency,
+    };
+    if (opts.model !== 'free' && opts.protocol && opts.protocol !== 'none') {
+      pricing.paymentProtocol = opts.protocol;
+    }
+
+    // 8. Update skill pricing
+    skill.pricing = pricing;
+
+    // 9. Write back to file
+    const ext = extname(file).toLowerCase();
+    const filePath = resolve(file);
+    if (ext === '.yaml' || ext === '.yml') {
+      writeFileSync(filePath, stringifyYaml(spec));
+    } else {
+      writeFileSync(filePath, JSON.stringify(spec, null, 2));
+    }
+
+    // 10. Validate against schema
+    const ajv = new Ajv({ strict: false, allErrors: true });
+    addFormats(ajv);
+    const validateFn = ajv.compile(bundledSchema as object);
+    if (!validateFn(spec)) {
+      console.log(pc.yellow('  Spec has validation issues:'));
+      for (const e of (validateFn.errors ?? [])) {
+        console.log(pc.yellow(`    ! ${e.instancePath || '/'} ${e.message}`));
+      }
+    }
+
+    // 11. Print summary
+    const amount = opts.model === 'free' ? 0 : opts.amount;
+    const protocolSuffix = (opts.model !== 'free' && opts.protocol && opts.protocol !== 'none')
+      ? ` via ${opts.protocol}`
+      : '';
+    console.log(pc.green(`✓ Updated pricing for skill ${opts.skill}: ${opts.model} ${amount} ${currency}${protocolSuffix}`));
+
+    // 12. Publish if requested
+    if (opts.publish) {
+      if (!opts.agentId) {
+        console.error(pc.red('✗ --publish requires --agent-id'));
+        process.exit(1);
+      }
+      console.log(pc.dim(`Publishing to ${opts.registry}...`));
+      let res: Response;
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Agent-ID': opts.agentId,
+        };
+        if (opts.publishToken) headers['X-Publish-Token'] = opts.publishToken;
+        res = await fetch(`${opts.registry}/api/agents`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(spec),
+          signal: AbortSignal.timeout(30_000),
+        });
+      } catch (err) {
+        console.error(pc.red(`✗ Network error: ${(err as Error).message}`));
+        process.exit(1);
+      }
+      const text = await res.text();
+      let data: { agent?: { id: string; spec_id?: string }; error?: string; errors?: string[] } = {};
+      try { data = JSON.parse(text); } catch { /* non-JSON */ }
+      if (res.ok && data.agent) {
+        const displayId = data.agent.spec_id ?? data.agent.id;
+        console.log(pc.green(`✓ Published: ${displayId}`));
+        console.log(pc.dim(`  ${opts.registry}/agents/${data.agent.id}`));
+      } else {
+        console.error(pc.red(`✗ Publish failed: ${data.error ?? 'Unknown error'}`));
+        if (data.errors) {
+          for (const e of data.errors) console.error(pc.red(`  ${e}`));
+        }
+        process.exit(1);
+      }
+    }
+  });
+
 // ── conformance ───────────────────────────────────────────────────────────────
 program
   .command('conformance')
@@ -254,6 +528,13 @@ program
 
     const validate = ajv.compile(bundledSchema as object);
     const conformanceDir = join(__dirname, '../../conformance');
+
+    if (!existsSync(conformanceDir)) {
+      console.error(pc.red('✗ Conformance suite not found'));
+      console.error(pc.dim(`  Expected at: ${conformanceDir}`));
+      console.error(pc.dim('  This command is intended for development — run it from the pactspec repo root.'));
+      process.exit(1);
+    }
 
     let passed = 0;
     let failed = 0;
@@ -293,11 +574,121 @@ program
   });
 
 // ── init ──────────────────────────────────────────────────────────────────────
+
+async function runInteractiveInit(outFile: string): Promise<void> {
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+
+  const ask = async (question: string, defaultValue: string): Promise<string> => {
+    const answer = await rl.question(`${question} ${pc.dim(`(${defaultValue})`)}: `);
+    return answer.trim() || defaultValue;
+  };
+
+  const choose = async (question: string, options: string[], defaultValue: string): Promise<string> => {
+    const answer = await rl.question(`${question} ${pc.dim(`[${options.join('/')}]`)} ${pc.dim(`(${defaultValue})`)}: `);
+    const trimmed = answer.trim().toLowerCase();
+    if (trimmed && options.map(o => o.toLowerCase()).includes(trimmed)) return trimmed;
+    if (!trimmed) return defaultValue;
+    console.log(pc.yellow(`  Invalid choice. Using default: ${defaultValue}`));
+    return defaultValue;
+  };
+
+  try {
+    console.log(pc.bold('\nPactSpec Init — Interactive Setup\n'));
+
+    const agentName = await ask('Agent name', 'Your Agent Name');
+    const providerName = await ask('Provider / organization name', 'Your Organization');
+    const endpointUrl = await ask('Endpoint URL', 'https://api.your-org.example/agent');
+
+    const pricingType = await choose('Will this agent be free or paid?', ['free', 'paid'], 'free');
+
+    let pricingModel = 'free';
+    let pricingAmount = 0;
+    let pricingCurrency = 'USD';
+    let paymentProtocol: string | undefined;
+
+    if (pricingType === 'paid') {
+      pricingModel = await choose('Pricing model', ['per-invocation', 'per-token', 'per-second'], 'per-invocation');
+      const amountStr = await ask('Price amount', '0.01');
+      pricingAmount = parseFloat(amountStr);
+      if (isNaN(pricingAmount) || pricingAmount < 0) {
+        console.log(pc.yellow('  Invalid amount. Using 0.01'));
+        pricingAmount = 0.01;
+      }
+      pricingCurrency = (await choose('Currency', ['USD', 'USDC', 'SOL'], 'USD')).toUpperCase();
+      paymentProtocol = await choose('Payment protocol', ['stripe', 'x402', 'none'], 'none');
+      if (paymentProtocol === 'none') paymentProtocol = undefined;
+    }
+
+    rl.close();
+
+    const providerSlug = slugify(providerName).split('-')[0] || 'your-org';
+    const agentSlug = slugify(agentName) || 'your-agent';
+    const providerOrigin = endpointUrl.startsWith('http')
+      ? (() => { try { return new URL(endpointUrl).origin; } catch { return 'https://your-org.example'; } })()
+      : 'https://your-org.example';
+
+    const pricing: Record<string, unknown> = { model: pricingModel, amount: pricingAmount, currency: pricingCurrency };
+    if (paymentProtocol) pricing.paymentProtocol = paymentProtocol;
+
+    const skeleton = {
+      specVersion: '1.0.0',
+      id: `urn:pactspec:${providerSlug}:${agentSlug}`,
+      name: agentName,
+      version: '1.0.0',
+      description: 'Describe what your agent does.',
+      provider: {
+        name: providerName,
+        url: providerOrigin,
+        contact: `hello@${providerSlug}.example`,
+      },
+      endpoint: {
+        url: endpointUrl,
+        auth: { type: 'bearer' },
+      },
+      skills: [
+        {
+          id: 'your-skill',
+          name: 'Your Skill',
+          description: 'Describe what this skill does.',
+          inputSchema: {
+            type: 'object',
+            required: ['input'],
+            properties: { input: { type: 'string' } },
+          },
+          outputSchema: {
+            type: 'object',
+            required: ['output'],
+            properties: { output: { type: 'string' } },
+          },
+          pricing,
+        },
+      ],
+      tags: [],
+    };
+
+    writeFileSync(resolve(outFile), JSON.stringify(skeleton, null, 2));
+    console.log('');
+    console.log(pc.green(`✓ Created ${outFile}`));
+    console.log(pc.dim('Edit the file, then run: pactspec validate ' + outFile));
+  } catch {
+    rl.close();
+    console.error(pc.red('\n✗ Interactive setup cancelled'));
+    process.exit(1);
+  }
+}
+
 program
   .command('init')
   .description('Generate a skeleton PactSpec JSON file')
   .option('-o, --out <file>', 'Output file', 'pactspec.json')
-  .action((opts: { out: string }) => {
+  .option('-i, --interactive', 'Interactive setup with pricing configuration')
+  .action(async (opts: { out: string; interactive?: boolean }) => {
+    if (opts.interactive) {
+      await runInteractiveInit(opts.out);
+      return;
+    }
+
     const skeleton = {
       specVersion: '1.0.0',
       id: 'urn:pactspec:your-org:your-agent',
@@ -337,6 +728,7 @@ program
     writeFileSync(resolve(opts.out), JSON.stringify(skeleton, null, 2));
     console.log(pc.green(`✓ Created ${opts.out}`));
     console.log(pc.dim('Edit the file, then run: pactspec validate ' + opts.out));
+    console.log(pc.dim('\n  Tip: run pactspec init -i for interactive setup with pricing'));
   });
 
 // ── test ──────────────────────────────────────────────────────────────────────
@@ -490,58 +882,6 @@ program
     if (failed > 0) process.exit(1);
   });
 
-// ── from-mcp ─────────────────────────────────────────────────────────────────
-program
-  .command('from-mcp <url>')
-  .description('Fetch list_tools from an MCP server and generate a PactSpec')
-  .option('-o, --out <file>', 'Output file (default: pactspec.json)')
-  .option('--name <name>', 'Override agent name')
-  .option('--version <version>', 'Override version')
-  .action(async (url: string, opts: { out?: string; name?: string; version?: string }) => {
-    const endpoint = url.startsWith('http://') || url.startsWith('https://')
-      ? url
-      : `http://${url}`;
-
-    let tools: Record<string, unknown>[];
-    let serverName: string | undefined;
-    let serverVersion: string | undefined;
-
-    try {
-      const result = await fetchMcpTools(endpoint);
-      tools = result.tools;
-      serverName = result.serverName;
-      serverVersion = result.serverVersion;
-    } catch (err) {
-      console.error(pc.red(`✗ Could not fetch list_tools from ${endpoint}`));
-      console.error(pc.red(`  ${(err as Error).message}`));
-      console.error(pc.dim('  If your MCP server does not expose HTTP list_tools, use: pactspec convert mcp <manifest.json>'));
-      process.exit(1);
-      return;
-    }
-
-    let fallbackName = 'MCP Agent';
-    try {
-      fallbackName = new URL(endpoint).hostname || fallbackName;
-    } catch { /* ignore */ }
-
-    const doc = {
-      name: opts.name ?? serverName ?? fallbackName,
-      version: opts.version ?? serverVersion ?? '1.0.0',
-      url: endpoint,
-      tools,
-    };
-
-    const result = convertMcp(doc);
-    const outFile = opts.out ?? 'pactspec.json';
-    writeFileSync(resolve(outFile), JSON.stringify(result.spec, null, 2));
-    console.log(pc.green(`✓ Wrote ${outFile} from MCP list_tools`));
-    if (result.warnings.length > 0) {
-      console.log(pc.yellow('\nWarnings (review before publishing):'));
-      for (const w of result.warnings) console.log(pc.yellow(`  ! ${w}`));
-    }
-    console.log(pc.dim(`\nNext: pactspec validate ${outFile}`));
-  });
-
 // ── convert ───────────────────────────────────────────────────────────────────
 program
   .command('convert <format> <file>')
@@ -596,6 +936,7 @@ program
   .option('--provider-url <url>', 'Provider URL (default: origin of <url>)')
   .option('--agent-id <id>', 'Override the urn:pactspec:provider:name id')
   .option('--publish', 'Publish immediately after generating (requires --agent-id)')
+  .option('--publish-token <token>', 'Publish token (X-Publish-Token header)')
   .option('--registry <url>', 'Registry URL', 'https://pactspec.dev')
   .action(async (url: string, opts: {
     out?: string;
@@ -603,6 +944,7 @@ program
     providerUrl?: string;
     agentId?: string;
     publish?: boolean;
+    publishToken?: string;
     registry: string;
   }) => {
     // Normalise URL
@@ -627,6 +969,7 @@ program
           'Accept': 'application/json, text/event-stream',
         },
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
+        signal: AbortSignal.timeout(15_000),
       });
 
       const contentType = res.headers.get('content-type') ?? '';
@@ -689,8 +1032,8 @@ program
     // Build PactSpec
     const origin = opts.providerUrl ?? mcpUrl.origin;
     const providerName = opts.provider ?? mcpUrl.hostname;
-    const providerSlug = slugify(providerName).split('-')[0] ?? 'provider';
-    const agentSlug = slugify(mcpUrl.hostname + (mcpUrl.pathname !== '/' ? '-' + mcpUrl.pathname : ''));
+    const providerSlug = slugify(providerName).split('-')[0] || 'provider';
+    const agentSlug = slugify(mcpUrl.hostname + (mcpUrl.pathname !== '/' ? '-' + mcpUrl.pathname : '')) || 'agent';
 
     const skills = tools.map((tool) => {
       const toolName = (tool.name as string | undefined) ?? 'tool';
@@ -729,6 +1072,7 @@ program
     console.log(pc.green(`✓ Spec written to ${outFile}`));
     console.log(pc.yellow('\n  ! Review outputSchema for each skill before publishing'));
     console.log(pc.yellow('  ! MCP does not define output schemas — fill these in manually'));
+    console.log(pc.yellow('  ! All skills defaulted to free pricing — edit to set per-invocation, per-token, or per-second pricing'));
 
     // Inline validate
     const ajv = new Ajv({ strict: false, allErrors: true });
@@ -751,10 +1095,16 @@ program
       console.log(pc.dim(`\nPublishing to ${opts.registry}...`));
       let pubRes: Response;
       try {
+        const pubHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Agent-ID': opts.agentId,
+        };
+        if (opts.publishToken) pubHeaders['X-Publish-Token'] = opts.publishToken;
         pubRes = await fetch(`${opts.registry}/api/agents`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Agent-ID': opts.agentId },
+          headers: pubHeaders,
           body: JSON.stringify(spec),
+          signal: AbortSignal.timeout(30_000),
         });
       } catch (err) {
         console.error(pc.red(`✗ Network error: ${(err as Error).message}`));
@@ -811,7 +1161,10 @@ function inferSchema(value: unknown): Record<string, unknown> {
 
 function resolveRef(ref: string, doc: Record<string, unknown>): Record<string, unknown> | null {
   if (!ref.startsWith('#/')) return null;
-  const parts = ref.replace(/^#\//, '').split('/');
+  const parts = ref
+    .replace(/^#\//, '')
+    .split('/')
+    .map((p) => p.replace(/~1/g, '/').replace(/~0/g, '~'));
   let node: unknown = doc;
   for (const part of parts) {
     if (!isRecord(node)) return null;

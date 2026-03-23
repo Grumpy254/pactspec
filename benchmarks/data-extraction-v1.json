@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "benchmark": "data-extraction-v1",
+  "name": "Structured Data Extraction Benchmark v1",
+  "description": "Tests accuracy of data extraction agents against 15 unstructured text samples requiring structured JSON output with exact field matching.",
+  "domain": "data-extraction",
+  "publisher": "PactSpec",
+  "skill": "data-extraction",
+  "source": "synthetic",
+  "sourceDescription": "All text samples and expected outputs are synthetic. Designed to test structured extraction across common document types (invoices, resumes, recipes, etc.).",
+  "tests": [
+    {
+      "id": "extract-001",
+      "description": "Business card text",
+      "request": { "method": "POST", "body": { "text": "Jane Chen, VP of Engineering\nAcme Corp\njane.chen@acme.io\n+1 (415) 555-0192\nSan Francisco, CA" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["name", "title", "company", "email"], "properties": { "name": { "const": "Jane Chen" }, "title": { "const": "VP of Engineering" }, "company": { "const": "Acme Corp" }, "email": { "const": "jane.chen@acme.io" } } } }
+    },
+    {
+      "id": "extract-002",
+      "description": "Invoice line items",
+      "request": { "method": "POST", "body": { "text": "Invoice #INV-2024-0847\nDate: March 15, 2024\nBill to: Globex Corporation\n\nWeb Development Services - 40 hours @ $150/hr = $6,000.00\nCloud Hosting (March) - $249.99\nSSL Certificate Renewal - $79.00\n\nSubtotal: $6,328.99\nTax (8.5%): $537.96\nTotal Due: $6,866.95\nDue Date: April 14, 2024" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["invoiceNumber", "total", "customer"], "properties": { "invoiceNumber": { "const": "INV-2024-0847" }, "total": { "const": 6866.95 }, "customer": { "const": "Globex Corporation" } } } }
+    },
+    {
+      "id": "extract-003",
+      "description": "Recipe with ingredients",
+      "request": { "method": "POST", "body": { "text": "Classic Margherita Pizza\n\nIngredients:\n- 1 lb pizza dough\n- 1/2 cup San Marzano tomato sauce\n- 8 oz fresh mozzarella, sliced\n- Fresh basil leaves\n- 2 tbsp extra virgin olive oil\n- Salt to taste\n\nPreheat oven to 500°F. Stretch dough, add sauce, cheese, bake 10-12 minutes. Top with basil and oil." } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["recipeName", "ingredients"], "properties": { "recipeName": { "const": "Classic Margherita Pizza" }, "ingredients": { "type": "array", "minItems": 5 } } } }
+    },
+    {
+      "id": "extract-004",
+      "description": "Resume snippet",
+      "request": { "method": "POST", "body": { "text": "EXPERIENCE\n\nSenior Software Engineer | Netflix | 2020 - Present\n- Led migration of streaming service to microservices architecture\n- Managed team of 8 engineers across 3 time zones\n\nSoftware Engineer | Stripe | 2017 - 2020\n- Built payment processing pipeline handling $1B+ monthly volume\n- Reduced API latency by 40% through caching optimization" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["positions"], "properties": { "positions": { "type": "array", "minItems": 2, "items": { "type": "object", "required": ["title", "company"], "properties": { "title": { "type": "string" }, "company": { "type": "string" } } } } } } }
+    },
+    {
+      "id": "extract-005",
+      "description": "Product review",
+      "request": { "method": "POST", "body": { "text": "Sony WH-1000XM5 Wireless Headphones\n★★★★☆ (4/5)\n$348.00\n\nGreat noise cancellation and comfortable for long flights. Battery lasts about 30 hours. The call quality is decent but not amazing. Sound is warm and balanced. My only complaint is they don't fold flat like the XM4s." } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["productName", "rating", "price"], "properties": { "productName": { "const": "Sony WH-1000XM5 Wireless Headphones" }, "rating": { "const": 4 }, "price": { "const": 348.00 } } } }
+    },
+    {
+      "id": "extract-006",
+      "description": "Flight itinerary",
+      "request": { "method": "POST", "body": { "text": "Booking Reference: XKJR7M\nPassenger: David Park\n\nFlight 1: UA 857\nMarch 22, 2024\nSFO → NRT\nDepart: 11:35 AM | Arrive: 3:15 PM +1\nSeat: 14A (Economy Plus)\n\nFlight 2: UA 838\nApril 5, 2024\nNRT → SFO\nDepart: 5:50 PM | Arrive: 11:20 AM (same day)\nSeat: 22C (Economy)" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["bookingReference", "passenger", "flights"], "properties": { "bookingReference": { "const": "XKJR7M" }, "passenger": { "const": "David Park" }, "flights": { "type": "array", "minItems": 2 } } } }
+    },
+    {
+      "id": "extract-007",
+      "description": "Medical prescription",
+      "request": { "method": "POST", "body": { "text": "Patient: Maria Santos, DOB: 05/12/1985\nDate: 01/15/2024\nDr. James Wilson, MD - License #A-45892\n\nRx: Lisinopril 10mg\nSig: Take one tablet by mouth once daily\nDisp: #30 (thirty)\nRefills: 3\n\nRx: Metformin 500mg\nSig: Take one tablet by mouth twice daily with meals\nDisp: #60 (sixty)\nRefills: 5" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["patient", "prescriptions"], "properties": { "patient": { "const": "Maria Santos" }, "prescriptions": { "type": "array", "minItems": 2, "items": { "type": "object", "required": ["medication", "dosage"], "properties": { "medication": { "type": "string" }, "dosage": { "type": "string" } } } } } } }
+    },
+    {
+      "id": "extract-008",
+      "description": "Shipping label",
+      "request": { "method": "POST", "body": { "text": "FROM:\nAmazon Fulfillment Center\n1901 SE 10th Ave\nPortland, OR 97214\n\nTO:\nSarah Johnson\n742 Evergreen Terrace\nSpringfield, IL 62704\n\nTracking: 1Z999AA10123456784\nWeight: 2.3 lbs\nShip Method: UPS Ground\nOrder: 114-3941689-8772232" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["tracking", "recipient", "carrier"], "properties": { "tracking": { "const": "1Z999AA10123456784" }, "recipient": { "const": "Sarah Johnson" }, "carrier": { "const": "UPS" } } } }
+    },
+    {
+      "id": "extract-009",
+      "description": "Bank statement entry",
+      "request": { "method": "POST", "body": { "text": "03/15 PURCHASE WHOLE FOODS MKT #10847 AUSTIN TX 78701 VISA DEBIT CARD ENDING 4521 -$127.43\n03/15 ACH CREDIT ACME CORP PAYROLL DIRECT DEPOSIT +$4,285.00\n03/16 ATM WITHDRAWAL CHASE ATM 78702 -$200.00\n03/16 RECURRING PAYMENT NETFLIX.COM -$15.99" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["transactions"], "properties": { "transactions": { "type": "array", "minItems": 4, "items": { "type": "object", "required": ["amount", "description"], "properties": { "amount": { "type": "number" }, "description": { "type": "string" } } } } } } }
+    },
+    {
+      "id": "extract-010",
+      "description": "Event invitation",
+      "request": { "method": "POST", "body": { "text": "You're Invited!\n\nAnnual Tech Summit 2024\nHosted by: Bay Area Developer Collective\n\nDate: Saturday, June 15, 2024\nTime: 9:00 AM - 5:00 PM PDT\nVenue: Moscone Center, Hall B\n747 Howard Street, San Francisco, CA 94103\n\nKeynote Speaker: Dr. Fei-Fei Li\nTicket Price: $149 (Early Bird: $99 before May 1)\n\nRSVP: events@badevs.org" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["eventName", "date", "venue"], "properties": { "eventName": { "const": "Annual Tech Summit 2024" }, "date": { "const": "2024-06-15" }, "venue": { "const": "Moscone Center" } } } }
+    },
+    {
+      "id": "extract-011",
+      "description": "Job posting",
+      "request": { "method": "POST", "body": { "text": "Staff Machine Learning Engineer\nOpenAI · San Francisco, CA (Hybrid)\nPosted: 2 days ago · 847 applicants\n\nSalary: $350,000 - $500,000/year + equity\nExperience: 7+ years\n\nAbout the role: Lead development of next-generation language models. You'll work closely with the research team to scale training infrastructure and optimize inference.\n\nRequirements:\n- PhD in CS, ML, or related field\n- Experience with distributed training (PyTorch, JAX)\n- Published research in NLP or large language models" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["title", "company", "location"], "properties": { "title": { "const": "Staff Machine Learning Engineer" }, "company": { "const": "OpenAI" }, "location": { "type": "string", "pattern": "San Francisco" } } } }
+    },
+    {
+      "id": "extract-012",
+      "description": "Restaurant menu item",
+      "request": { "method": "POST", "body": { "text": "WAGYU BURGER* — $28\nAustralian wagyu patty, aged cheddar, caramelized onions, truffle aioli, brioche bun. Served with hand-cut fries.\nAdd bacon +$3 | Add avocado +$2 | Substitute sweet potato fries +$1\n*Contains: gluten, dairy, eggs" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["name", "price", "allergens"], "properties": { "name": { "const": "Wagyu Burger" }, "price": { "const": 28 }, "allergens": { "type": "array", "minItems": 3 } } } }
+    },
+    {
+      "id": "extract-013",
+      "description": "Real estate listing",
+      "request": { "method": "POST", "body": { "text": "3BR/2BA Single Family Home — $875,000\n1,847 sq ft | Built 2018 | Lot: 5,200 sq ft\n456 Oak Valley Drive, Austin, TX 78745\n\nStunning modern home in desirable South Austin neighborhood. Open floor plan with chef's kitchen, quartz countertops, and stainless steel appliances. Primary suite with walk-in closet. Covered patio with Hill Country views. Top-rated AISD schools.\n\nMLS#: 2847593 | Listed by: Compass RE" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["price", "bedrooms", "bathrooms", "sqft"], "properties": { "price": { "const": 875000 }, "bedrooms": { "const": 3 }, "bathrooms": { "const": 2 }, "sqft": { "const": 1847 } } } }
+    },
+    {
+      "id": "extract-014",
+      "description": "Weather report",
+      "request": { "method": "POST", "body": { "text": "New York City Weather — Tuesday, March 19\nCurrent: 42°F (6°C), Partly Cloudy\nHigh: 51°F | Low: 38°F\nWind: NW 12 mph, gusts to 22 mph\nHumidity: 45%\nUV Index: 3 (Moderate)\nSunrise: 7:04 AM | Sunset: 7:12 PM\n\nTomorrow: Rain likely, high 48°F. 70% chance of precipitation." } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["location", "temperature", "conditions"], "properties": { "location": { "const": "New York City" }, "temperature": { "type": "object", "required": ["current"], "properties": { "current": { "const": 42 } } }, "conditions": { "const": "Partly Cloudy" } } } }
+    },
+    {
+      "id": "extract-015",
+      "description": "Sports score",
+      "request": { "method": "POST", "body": { "text": "NBA — Final\nGolden State Warriors 112, Los Angeles Lakers 108\n\nTop Performers:\nGSW: S. Curry 34 pts, 6 reb, 8 ast\nLAL: L. James 29 pts, 11 reb, 7 ast\n\nWarriors improve to 42-28, Lakers fall to 39-31.\nNext: Warriors @ Suns (Thu 10:00 PM ET)" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object", "required": ["winner", "loser", "winnerScore", "loserScore"], "properties": { "winner": { "const": "Golden State Warriors" }, "loser": { "const": "Los Angeles Lakers" }, "winnerScore": { "const": 112 }, "loserScore": { "const": 108 } } } }
+    }
+  ]
+}

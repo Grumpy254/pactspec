@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "benchmark": "api-response-quality-v1",
+  "name": "API Response Quality Benchmark v1",
+  "description": "Tests basic API behavior that any well-built agent should handle: valid JSON, error handling, UTF-8 support, and proper status codes.",
+  "domain": "api-quality",
+  "publisher": "PactSpec",
+  "skill": "*",
+  "source": "synthetic",
+  "sourceDescription": "Tests basic HTTP API behavior (error handling, UTF-8, status codes). All test inputs are synthetic. Expectations based on HTTP/JSON standards (RFC 7231, RFC 8259).",
+  "tests": [
+    {
+      "id": "api-001",
+      "description": "Returns valid JSON with required fields",
+      "request": { "method": "POST", "body": { "input": "Hello, world" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object" } }
+    },
+    {
+      "id": "api-002",
+      "description": "Handles empty body with 400, not 500",
+      "request": { "method": "POST", "headers": { "Content-Type": "application/json" }, "body": {} },
+      "expect": { "status": 400, "outputSchema": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string", "minLength": 1 } } } }
+    },
+    {
+      "id": "api-003",
+      "description": "Handles missing required field with 400",
+      "request": { "method": "POST", "body": { "unrelated": "data" } },
+      "expect": { "status": 400, "outputSchema": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string" } } } }
+    },
+    {
+      "id": "api-004",
+      "description": "UTF-8 emoji in input preserved",
+      "request": { "method": "POST", "body": { "input": "Summarize this: The rocket launched successfully 🚀 and reached orbit 🌍" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object" } }
+    },
+    {
+      "id": "api-005",
+      "description": "CJK characters in input handled correctly",
+      "request": { "method": "POST", "body": { "input": "翻訳してください：人工知能は世界を変えています。機械学習とディープラーニングは多くの分野で応用されています。" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object" } }
+    },
+    {
+      "id": "api-006",
+      "description": "RTL and mixed-direction text handled",
+      "request": { "method": "POST", "body": { "input": "مرحبا بالعالم - Hello World - שלום עולם" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object" } }
+    },
+    {
+      "id": "api-007",
+      "description": "Returns within timeout (5 seconds)",
+      "request": { "method": "POST", "body": { "input": "Quick test" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object" } },
+      "timeoutMs": 5000
+    },
+    {
+      "id": "api-008",
+      "description": "Handles null values in input gracefully",
+      "request": { "method": "POST", "body": { "input": null, "extra": null } },
+      "expect": { "status": 400, "outputSchema": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string" } } } }
+    },
+    {
+      "id": "api-009",
+      "description": "Error response has consistent format",
+      "request": { "method": "POST", "body": { "input": "" } },
+      "expect": { "status": 400, "outputSchema": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string", "minLength": 1 } } } }
+    },
+    {
+      "id": "api-010",
+      "description": "Handles special characters without injection",
+      "request": { "method": "POST", "body": { "input": "<script>alert('xss')</script> ' OR 1=1 -- {{template}} ${variable}" } },
+      "expect": { "status": 200, "outputSchema": { "type": "object" } }
+    }
+  ]
+}

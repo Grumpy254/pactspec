@@ -1,0 +1,53 @@
+{
+  "_comment": "Endpoint using bearer token authentication",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:securecorp:pii-redactor",
+  "name": "PII Redactor",
+  "version": "1.1.0",
+  "description": "Detects and redacts personally identifiable information from text.",
+  "provider": {
+    "name": "SecureCorp",
+    "url": "https://securecorp.example.com",
+    "contact": "security@securecorp.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.securecorp.example.com/v1/redact",
+    "auth": {
+      "type": "bearer"
+    }
+  },
+  "skills": [{
+    "id": "redact-pii",
+    "name": "Redact PII",
+    "description": "Scans text and replaces PII entities with redaction tokens.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string" },
+        "entities": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["email", "phone", "ssn", "name", "address"] }
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["redactedText", "detectedEntities"],
+      "properties": {
+        "redactedText": { "type": "string" },
+        "detectedEntities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "start": { "type": "integer" },
+              "end": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }]
+}

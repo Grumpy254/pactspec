@@ -1,0 +1,37 @@
+{
+  "_comment": "Spec with a license field",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:opentools:markdown-to-pdf",
+  "name": "Markdown to PDF Converter",
+  "version": "1.0.0",
+  "description": "Converts Markdown documents into styled PDF files.",
+  "provider": {
+    "name": "OpenTools Foundation",
+    "url": "https://opentools.example.org"
+  },
+  "endpoint": {
+    "url": "https://api.opentools.example.org/md2pdf"
+  },
+  "skills": [{
+    "id": "convert-md-to-pdf",
+    "name": "Convert Markdown to PDF",
+    "description": "Accepts Markdown text and returns a URL to the generated PDF.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["markdown"],
+      "properties": {
+        "markdown": { "type": "string" },
+        "pageSize": { "type": "string", "enum": ["letter", "a4"] }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["pdfUrl"],
+      "properties": {
+        "pdfUrl": { "type": "string", "format": "uri" },
+        "pageCount": { "type": "integer" }
+      }
+    }
+  }],
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,51 @@
+{
+  "_comment": "Spec with delegation — wraps an upstream agent with revenue sharing",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:reseller:premium-summarizer",
+  "name": "Premium Summarizer",
+  "version": "1.0.0",
+  "description": "Resells upstream summarization with added caching and rate limiting.",
+  "provider": {
+    "name": "Reseller Corp",
+    "url": "https://reseller.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.reseller.example.com/summarize",
+    "auth": { "type": "bearer" }
+  },
+  "skills": [{
+    "id": "summarize-text",
+    "name": "Summarize Text",
+    "description": "Produces a concise summary of the given text.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string" },
+        "maxLength": { "type": "integer", "minimum": 50, "maximum": 5000 }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["summary"],
+      "properties": {
+        "summary": { "type": "string" },
+        "wordCount": { "type": "integer" }
+      }
+    },
+    "pricing": {
+      "model": "per-invocation",
+      "amount": 0.03,
+      "currency": "USD",
+      "protocol": "stripe"
+    }
+  }],
+  "delegation": {
+    "delegatedFrom": "urn:pactspec:originator:base-summarizer",
+    "revenueShare": {
+      "upstream": 70,
+      "downstream": 30
+    },
+    "terms": "https://reseller.example.com/delegation-terms"
+  }
+}

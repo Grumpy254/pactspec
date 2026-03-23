@@ -1,0 +1,41 @@
+{
+  "name": "@pactspec/x402-middleware",
+  "version": "0.1.0",
+  "description": "HTTP 402 micropayment middleware for PactSpec agent endpoints",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Grumpy254/pactspec.git",
+    "directory": "packages/x402-middleware"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "pactspec",
+    "x402",
+    "402",
+    "payment",
+    "micropayment",
+    "middleware",
+    "agent",
+    "ai",
+    "crypto",
+    "usdc",
+    "solana"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
+  }
+}

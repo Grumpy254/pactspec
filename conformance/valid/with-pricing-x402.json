@@ -1,0 +1,46 @@
+{
+  "_comment": "Skill with x402 protocol pricing in USDC",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:chainwatch:token-risk",
+  "name": "Token Risk Scorer",
+  "version": "3.0.1",
+  "description": "On-chain risk scoring for ERC-20 tokens using x402 micropayments.",
+  "provider": {
+    "name": "ChainWatch Labs",
+    "url": "https://chainwatch.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.chainwatch.example.com/v3/score",
+    "auth": { "type": "none" }
+  },
+  "skills": [{
+    "id": "score-token",
+    "name": "Score Token",
+    "description": "Returns a risk score (0-100) for a given ERC-20 contract address.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["chainId", "contractAddress"],
+      "properties": {
+        "chainId": { "type": "integer" },
+        "contractAddress": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["riskScore", "flags"],
+      "properties": {
+        "riskScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "pricing": {
+      "model": "per-invocation",
+      "amount": 0.002,
+      "currency": "USDC",
+      "protocol": "x402"
+    }
+  }]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@pactspec/stripe-billing",
+  "version": "0.1.0",
+  "description": "Stripe payment integration for PactSpec agents — metered billing, checkout, and usage reporting",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Grumpy254/pactspec.git",
+    "directory": "packages/stripe-billing"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "pactspec",
+    "stripe",
+    "billing",
+    "metered",
+    "agent",
+    "ai",
+    "payments"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
+  }
+}

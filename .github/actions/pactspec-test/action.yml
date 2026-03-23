@@ -1,0 +1,50 @@
+name: 'PactSpec Test'
+description: 'Run PactSpec test suites in CI'
+inputs:
+  spec:
+    description: 'Path to PactSpec JSON'
+    required: true
+  skill:
+    description: 'Skill ID to test (optional)'
+    required: false
+  endpoint:
+    description: 'Override endpoint URL (optional)'
+    required: false
+  suite:
+    description: 'Local test suite file (optional)'
+    required: false
+  timeout:
+    description: 'Per-test timeout in ms'
+    required: false
+    default: '10000'
+  cli-version:
+    description: 'Version of @pactspec/cli to install'
+    required: false
+    default: 'latest'
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install PactSpec CLI
+      shell: bash
+      env:
+        CLI_VERSION: ${{ inputs.cli-version }}
+      run: npm install -g "@pactspec/cli@${CLI_VERSION}"
+    - name: Run PactSpec tests
+      shell: bash
+      env:
+        SPEC: ${{ inputs.spec }}
+        SKILL: ${{ inputs.skill }}
+        ENDPOINT: ${{ inputs.endpoint }}
+        SUITE: ${{ inputs.suite }}
+        TIMEOUT: ${{ inputs.timeout }}
+      run: |
+        set -e
+        ARGS=("$SPEC")
+        if [ -n "$SKILL" ]; then ARGS+=(--skill "$SKILL"); fi
+        if [ -n "$ENDPOINT" ]; then ARGS+=(--endpoint "$ENDPOINT"); fi
+        if [ -n "$SUITE" ]; then ARGS+=(--suite "$SUITE"); fi
+        if [ -n "$TIMEOUT" ]; then ARGS+=(--timeout "$TIMEOUT"); fi
+        pactspec test "${ARGS[@]}"

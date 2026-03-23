@@ -43,8 +43,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ summary, sentences });
   } catch (e) {
+    console.error('Summarization failed:', (e as Error).message);
     return NextResponse.json(
-      { error: `Summarization failed: ${(e as Error).message}` },
+      { error: 'Summarization failed' },
       { status: 502 }
     );
   }

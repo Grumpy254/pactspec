@@ -1,0 +1,45 @@
+{
+  "_comment": "Skill with per-second pricing in SOL",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:solstream:live-transcribe",
+  "name": "Live Transcription Service",
+  "version": "1.0.0",
+  "description": "Real-time audio transcription billed per second of processing time.",
+  "provider": {
+    "name": "SolStream AI",
+    "url": "https://solstream.example.com",
+    "contact": "ops@solstream.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.solstream.example.com/transcribe",
+    "auth": { "type": "bearer" }
+  },
+  "skills": [{
+    "id": "transcribe-audio",
+    "name": "Transcribe Audio",
+    "description": "Streams real-time transcription of audio input, charged per processing second.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["audioUrl", "language"],
+      "properties": {
+        "audioUrl": { "type": "string", "format": "uri" },
+        "language": { "type": "string", "enum": ["en", "es", "fr", "de", "ja"] }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["transcript", "durationSeconds"],
+      "properties": {
+        "transcript": { "type": "string" },
+        "durationSeconds": { "type": "number" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "pricing": {
+      "model": "per-second",
+      "amount": 0.00001,
+      "currency": "SOL",
+      "protocol": "x402"
+    }
+  }]
+}

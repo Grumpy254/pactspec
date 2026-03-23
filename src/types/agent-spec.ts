@@ -44,8 +44,17 @@ export interface AgentSpecEndpoint {
   url: string;
   auth?: {
     type: AuthType;
-    header?: string;
+    name?: string;   // header name for type: 'header'
   };
+}
+
+export interface AgentSpecDelegation {
+  delegatedFrom?: string;      // spec_id of the upstream agent being wrapped
+  revenueShare?: {
+    upstream: number;           // percentage to upstream (0-100)
+    downstream: number;         // percentage kept by this agent (0-100)
+  };
+  terms?: string;               // URL to delegation agreement/terms
 }
 
 export interface AgentSpec {
@@ -63,6 +72,38 @@ export interface AgentSpec {
     documentation?: string;
     repository?: string;
   };
+  delegation?: AgentSpecDelegation;
+}
+
+// Benchmark types
+export interface Benchmark {
+  id: string;                    // e.g., "aapc-medical-coding-v2"
+  name: string;                  // "AAPC Medical Coding Benchmark v2"
+  description: string;
+  domain: string;                // "medical-coding", "legal-review", "security-audit"
+  version: string;
+  publisher: string;             // who published this benchmark
+  publisherUrl?: string;
+  testSuiteUrl: string;          // URL to the test suite JSON
+  testCount: number;
+  skill: string;                 // which skill type this benchmarks
+  createdAt: string;
+  // Source provenance — distinguishes synthetic benchmarks from peer-reviewed ones
+  source?: 'synthetic' | 'peer-reviewed' | 'industry-standard' | 'community';
+  sourceDescription?: string;    // e.g., "Synthetic scenarios using real WHO ICD-11 codes"
+  sourceUrl?: string;            // URL to the authoritative source
+  sourceLicense?: string;        // license of the source data
+}
+
+export interface BenchmarkResult {
+  id: string;
+  benchmarkId: string;
+  agentId: string;
+  score: number;                 // 0-1 (percentage of tests passed)
+  passedCount: number;
+  totalCount: number;
+  runAt: string;
+  attestationHash?: string;
 }
 
 // DB row types
@@ -80,8 +121,15 @@ export interface AgentRow {
   verified: boolean;
   attestation_hash: string | null;
   verified_at: string | null;
+  last_validation_pass_rate?: number | null;
+  last_validation_test_count?: number | null;
+  last_validation_at?: string | null;
+  delegated_from?: string | null;
+  pricing_verified?: boolean;
+  pricing_verified_at?: string | null;
   published_at: string;
   updated_at: string;
+  benchmark_results?: BenchmarkResult[];
 }
 
 // Test suite format agents publish at testSuite.url

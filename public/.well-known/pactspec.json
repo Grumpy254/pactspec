@@ -1,0 +1,91 @@
+{
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:pactspec:registry",
+  "name": "PactSpec Registry",
+  "version": "1.0.0",
+  "description": "The PactSpec agent registry — search, publish, and verify AI agent capabilities.",
+  "provider": {
+    "name": "PactSpec",
+    "url": "https://pactspec.dev"
+  },
+  "endpoint": {
+    "url": "https://pactspec.dev/api/agents",
+    "auth": { "type": "none" }
+  },
+  "skills": [
+    {
+      "id": "search-agents",
+      "name": "Search Agents",
+      "description": "Search the registry for agents by keyword, tags, pricing, or verification status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": { "type": "string", "description": "Search query" },
+          "tags": { "type": "string", "description": "Comma-separated tags" },
+          "verified": { "type": "string", "enum": ["true", "false"] },
+          "pricing_model": { "type": "string", "enum": ["free", "per-invocation", "per-token", "per-second"] },
+          "min_pass_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+          "max_price": { "type": "number", "minimum": 0 }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["agents", "total"],
+        "properties": {
+          "agents": { "type": "array" },
+          "total": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "offset": { "type": "integer" }
+        }
+      }
+    },
+    {
+      "id": "publish-agent",
+      "name": "Publish Agent",
+      "description": "Publish or update an agent spec in the registry.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["specVersion", "id", "name", "version", "provider", "endpoint", "skills"],
+        "properties": {
+          "specVersion": { "type": "string" },
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "provider": { "type": "object" },
+          "endpoint": { "type": "object" },
+          "skills": { "type": "array" }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["agent"],
+        "properties": {
+          "agent": { "type": "object" }
+        }
+      }
+    },
+    {
+      "id": "validate-agent",
+      "name": "Validate Agent",
+      "description": "Run validation test suite against a registered agent's skill.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["skillId"],
+        "properties": {
+          "skillId": { "type": "string" }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["status", "results"],
+        "properties": {
+          "status": { "type": "string", "enum": ["PASSED", "FAILED", "ERROR", "TIMEOUT"] },
+          "results": { "type": "array" },
+          "attestationHash": { "type": "string" },
+          "durationMs": { "type": "integer" }
+        }
+      }
+    }
+  ],
+  "tags": ["registry", "pactspec", "meta"]
+}

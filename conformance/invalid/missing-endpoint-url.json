@@ -1,0 +1,17 @@
+{
+  "_comment": "Must be rejected: endpoint object is missing the required 'url' field",
+  "_expectedError": "required",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:test:missing-endpoint-url",
+  "name": "Missing Endpoint URL Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "auth": { "type": "bearer" } },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "A valid skill on an agent with no endpoint URL.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" }
+  }]
+}

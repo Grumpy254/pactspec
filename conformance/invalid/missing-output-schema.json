@@ -1,0 +1,16 @@
+{
+  "_comment": "Must be rejected: skill is missing the required 'outputSchema' field",
+  "_expectedError": "required",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:test:missing-output-schema",
+  "name": "Missing Output Schema Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "This skill is missing its outputSchema.",
+    "inputSchema": { "type": "object" }
+  }]
+}

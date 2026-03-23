@@ -1,0 +1,16 @@
+{
+  "_comment": "Must be rejected: skill is missing the required 'inputSchema' field",
+  "_expectedError": "required",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:test:missing-input-schema",
+  "name": "Missing Input Schema Agent",
+  "version": "1.0.0",
+  "provider": { "name": "Test" },
+  "endpoint": { "url": "https://api.test.example/agent" },
+  "skills": [{
+    "id": "test-skill",
+    "name": "Test Skill",
+    "description": "This skill is missing its inputSchema.",
+    "outputSchema": { "type": "object" }
+  }]
+}

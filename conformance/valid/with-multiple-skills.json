@@ -1,0 +1,98 @@
+{
+  "_comment": "Agent with three skills using different pricing models",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:langtools:text-toolkit",
+  "name": "Text Toolkit",
+  "version": "4.2.0",
+  "description": "A multi-skill agent offering translation, summarization, and sentiment analysis.",
+  "provider": {
+    "name": "LangTools",
+    "url": "https://langtools.example.com",
+    "contact": "support@langtools.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.langtools.example.com/v4",
+    "auth": { "type": "bearer" }
+  },
+  "skills": [
+    {
+      "id": "translate",
+      "name": "Translate Text",
+      "description": "Translates text between supported language pairs.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["text", "sourceLang", "targetLang"],
+        "properties": {
+          "text": { "type": "string" },
+          "sourceLang": { "type": "string" },
+          "targetLang": { "type": "string" }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["translatedText"],
+        "properties": {
+          "translatedText": { "type": "string" }
+        }
+      },
+      "pricing": {
+        "model": "per-token",
+        "amount": 0.00002,
+        "currency": "USD",
+        "protocol": "stripe"
+      }
+    },
+    {
+      "id": "summarize",
+      "name": "Summarize Document",
+      "description": "Produces a condensed summary of a long document.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["document"],
+        "properties": {
+          "document": { "type": "string" },
+          "targetLength": { "type": "integer" }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["summary"],
+        "properties": {
+          "summary": { "type": "string" },
+          "compressionRatio": { "type": "number" }
+        }
+      },
+      "pricing": {
+        "model": "per-invocation",
+        "amount": 0.01,
+        "currency": "USDC",
+        "protocol": "x402"
+      }
+    },
+    {
+      "id": "sentiment",
+      "name": "Analyze Sentiment",
+      "description": "Returns sentiment polarity and magnitude for the given text.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["polarity", "magnitude"],
+        "properties": {
+          "polarity": { "type": "string", "enum": ["positive", "negative", "neutral", "mixed"] },
+          "magnitude": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      },
+      "pricing": {
+        "model": "free",
+        "amount": 0,
+        "currency": "USD"
+      }
+    }
+  ]
+}

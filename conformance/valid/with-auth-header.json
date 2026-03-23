@@ -1,0 +1,48 @@
+{
+  "_comment": "Endpoint using custom header authentication with a named header",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:geodata:reverse-geocode",
+  "name": "Reverse Geocoder",
+  "version": "2.0.0",
+  "description": "Converts lat/lng coordinates into human-readable addresses.",
+  "provider": {
+    "name": "GeoData Inc",
+    "url": "https://geodata.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.geodata.example.com/v2/reverse",
+    "auth": {
+      "type": "header",
+      "header": "X-GeoData-API-Key"
+    }
+  },
+  "skills": [{
+    "id": "reverse-geocode",
+    "name": "Reverse Geocode",
+    "description": "Returns a structured address for the given latitude and longitude.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["latitude", "longitude"],
+      "properties": {
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["address"],
+      "properties": {
+        "address": {
+          "type": "object",
+          "properties": {
+            "street": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string" },
+            "postalCode": { "type": "string" },
+            "country": { "type": "string" }
+          }
+        }
+      }
+    }
+  }]
+}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assertSafeUrl } from '@/lib/validator';
 
 function extractMeta(html: string, property: string): string {
   // og: and name= meta tags
@@ -58,10 +59,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Invalid URL: ${(e as Error).message}` }, { status: 400 });
   }
 
+  // SSRF protection: block private/internal IPs
+  try {
+    await assertSafeUrl(parsed.toString(), 'url');
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+  }
+
   try {
     const res = await fetch(parsed.toString(), {
       headers: { 'User-Agent': 'PactSpec-Metadata/1.0' },
       signal: AbortSignal.timeout(8000),
+      redirect: 'manual',
     });
 
     if (!res.ok) {

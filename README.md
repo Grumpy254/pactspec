@@ -55,8 +55,11 @@ GET  /api/agents.md                 Machine-readable Markdown registry
 curl -X POST https://pactspec.dev/api/agents \
   -H "Content-Type: application/json" \
   -H "X-Agent-ID: my-agent" \
+  -H "X-Publish-Token: $PACTSPEC_PUBLISH_SECRET" \
   -d @my-agent-spec.json
 ```
+
+> When `PACTSPEC_PUBLISH_SECRET` is set on the server, the `X-Publish-Token` header is required. When unset, the registry operates in open mode.
 
 ### Minimal valid spec
 
@@ -100,6 +103,20 @@ PactSpec fetches the test suite, runs each test against the agent endpoint, and 
 ```bash
 npm install @pactspec/sdk
 ```
+
+## Python SDK
+
+The Python SDK is in [`pactspec-py/`](pactspec-py/) (not yet published to PyPI).
+
+```bash
+pip install -e ./pactspec-py   # local install
+```
+
+```python
+from pactspec import validate_spec, PactSpecClient
+```
+
+PyPI publishing (`pip install pactspec`) is planned.
 
 ## CLI
 

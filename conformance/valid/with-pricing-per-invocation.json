@@ -1,0 +1,52 @@
+{
+  "_comment": "Skill with per-invocation pricing via Stripe in USD",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:acme:receipt-scanner",
+  "name": "Receipt Scanner",
+  "version": "1.2.0",
+  "description": "Extracts line items and totals from photographed receipts.",
+  "provider": {
+    "name": "Acme Document AI",
+    "url": "https://acme-docai.example.com",
+    "contact": "billing@acme-docai.example.com"
+  },
+  "endpoint": {
+    "url": "https://api.acme-docai.example.com/v1/scan"
+  },
+  "skills": [{
+    "id": "scan-receipt",
+    "name": "Scan Receipt",
+    "description": "Parses a receipt image and returns structured line items.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["imageUrl"],
+      "properties": {
+        "imageUrl": { "type": "string", "format": "uri" }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["merchant", "total", "lineItems"],
+      "properties": {
+        "merchant": { "type": "string" },
+        "total": { "type": "number" },
+        "lineItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "amount": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "pricing": {
+      "model": "per-invocation",
+      "amount": 0.05,
+      "currency": "USD",
+      "protocol": "stripe"
+    }
+  }]
+}

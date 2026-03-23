@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { validateAgentSpec } from '@/lib/validator';
 import { specsEqual } from '@/lib/spec-hash';
 import type { AgentSpec } from '@/types/agent-spec';
+import { sanitizeSearchQuery } from '@/lib/search-sanitize';
+
+function checkPublishToken(req: NextRequest): boolean {
+  const secret = process.env.PACTSPEC_PUBLISH_SECRET;
+  if (!secret) return true; // open registry mode when no secret is configured
+  const token = req.headers.get('x-publish-token');
+  if (!token || token.length !== secret.length) return false;
+  return timingSafeEqual(Buffer.from(token), Buffer.from(secret));
+}
 
 // GET /api/agents?q=&tags=&verified=true
 export async function GET(req: NextRequest) {
@@ -16,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const rawLimit = parseInt(searchParams.get('limit') ?? '50', 10);
   const rawOffset = parseInt(searchParams.get('offset') ?? '0', 10);
-  const limit = Math.min(Number.isFinite(rawLimit) ? rawLimit : 50, 100);
+  const limit = Math.max(1, Math.min(Number.isFinite(rawLimit) ? rawLimit : 50, 100));
   const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
 
   if (pricingModel && !['free', 'per-invocation', 'per-token', 'per-second'].includes(pricingModel)) {
@@ -50,17 +60,15 @@ export async function GET(req: NextRequest) {
     .range(offset, offset + limit - 1);
 
   if (q) {
-    // Keep only characters that cannot break PostgREST filter syntax.
-    // Strips `.`, `(`, `)`, `,`, `*` which are PostgREST/LIKE metacharacters.
-    const safe = q.replace(/[^a-zA-Z0-9 _\-@]/g, '').slice(0, 100);
-    if (safe) {
+    const escaped = sanitizeSearchQuery(q);
+    if (escaped) {
       query = query.or(
-        `name.ilike.%${safe}%,description.ilike.%${safe}%,provider_name.ilike.%${safe}%`
+        `name.ilike.%${escaped}%,description.ilike.%${escaped}%,provider_name.ilike.%${escaped}%`
       );
     }
   }
   if (tagsParam) {
-    const tags = tagsParam.split(',').map((t) => t.trim()).filter(Boolean);
+    const tags = tagsParam.split(',').map((t) => t.trim().replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 50)).filter(Boolean);
     if (tags.length > 0) query = query.overlaps('tags', tags);
   }
   if (verifiedParam === 'true') {
@@ -78,21 +86,28 @@ export async function GET(req: NextRequest) {
 
   const { data, error, count } = await query;
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('GET /api/agents error:', error.message);
+    return NextResponse.json({ error: 'Failed to fetch agents' }, { status: 500 });
   }
 
-  return NextResponse.json({ agents: data, total: count, limit, offset });
+  return NextResponse.json(
+    { agents: data, total: count, limit, offset },
+    { headers: { 'Cache-Control': 'public, max-age=10, stale-while-revalidate=30' } }
+  );
 }
 
 // POST /api/agents — publish new agent spec
 export async function POST(req: NextRequest) {
   const agentIdHeader = req.headers.get('x-agent-id');
   if (!agentIdHeader) {
-    return NextResponse.json({ error: 'X-Agent-ID header required' }, { status: 401 });
+    return NextResponse.json({ error: 'X-Agent-ID header required' }, { status: 400 });
   }
   // Basic format check — prevent trivially empty or oversized identifiers
   if (agentIdHeader.length < 4 || agentIdHeader.length > 128 || !/^[\w\-.@:]+$/.test(agentIdHeader)) {
     return NextResponse.json({ error: 'X-Agent-ID is invalid' }, { status: 400 });
+  }
+  if (!checkPublishToken(req)) {
+    return NextResponse.json({ error: 'Invalid or missing X-Publish-Token' }, { status: 403 });
   }
 
   let body: unknown;
@@ -113,7 +128,8 @@ export async function POST(req: NextRequest) {
   try {
     supabase = createServiceRoleClient();
   } catch (err) {
-    return NextResponse.json({ error: 'Service client init failed: ' + String(err) }, { status: 500 });
+    console.error('Service client init failed:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -123,14 +139,16 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 500 });
+    console.error('Agent lookup failed:', existingError.message);
+    return NextResponse.json({ error: 'Failed to check existing agent' }, { status: 500 });
   }
 
   let shouldResetVerification = false;
   try {
     shouldResetVerification = existing != null && !specsEqual(existing.spec as AgentSpec, spec);
   } catch (err) {
-    return NextResponse.json({ error: 'specsEqual failed: ' + String(err) }, { status: 500 });
+    console.error('specsEqual failed:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
   const upsertPayload: Record<string, unknown> = {
@@ -146,6 +164,10 @@ export async function POST(req: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
+  if (spec.delegation?.delegatedFrom) {
+    upsertPayload.delegated_from = spec.delegation.delegatedFrom;
+  }
+
   if (shouldResetVerification) {
     upsertPayload.verified = false;
     upsertPayload.attestation_hash = null;
@@ -160,7 +182,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Agent upsert failed:', error.message);
+    return NextResponse.json({ error: 'Failed to save agent' }, { status: 500 });
   }
 
   // Update normalized skills: upsert the new set (no duplicates via unique constraint),
@@ -185,14 +208,19 @@ export async function POST(req: NextRequest) {
       .from('skills')
       .upsert(skillRows, { onConflict: 'agent_id,skill_id' });
     if (upsertError) {
-      return NextResponse.json({ error: 'Failed to save skills: ' + upsertError.message }, { status: 500 });
+      console.error('Skill upsert failed:', upsertError.message);
+      return NextResponse.json({ error: 'Failed to save skills' }, { status: 500 });
     }
     // Remove skills that were deleted from the spec
-    await supabase
+    const currentSkillIds = spec.skills.map((s) => s.id);
+    const { error: deleteError } = await supabase
       .from('skills')
       .delete()
       .eq('agent_id', agent.id)
-      .not('skill_id', 'in', `(${spec.skills.map((s) => `"${s.id}"`).join(',')})`);
+      .not('skill_id', 'in', `(${currentSkillIds.map((id) => JSON.stringify(id)).join(',')})`);
+    if (deleteError) {
+      console.error('Failed to delete stale skills:', deleteError.message);
+    }
   }
 
   return NextResponse.json({ agent }, { status: 201 });

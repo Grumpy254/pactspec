@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "pactspec"
@@ -8,21 +8,39 @@ version = "0.1.0"
 description = "Official Python SDK for PactSpec — validate, publish, and verify AI agent capability specs"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.8"
-keywords = ["pactspec", "ai-agents", "sdk", "registry", "attestation"]
+requires-python = ">=3.9"
+authors = [
+    { name = "PactSpec Contributors", email = "hello@pactspec.dev" },
+]
+keywords = ["pactspec", "ai-agents", "sdk", "registry", "attestation", "agent-spec"]
 dependencies = [
     "jsonschema>=4.0.0",
     "httpx>=0.24.0",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 
 [project.urls]
 Homepage = "https://pactspec.dev"
 Repository = "https://github.com/Grumpy254/pactspec"
 Documentation = "https://pactspec.dev/docs"
+Issues = "https://github.com/Grumpy254/pactspec/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pactspec*"]
 
 [tool.setuptools.package-data]
-pactspec = ["schema.json"]
+pactspec = ["schema.json", "py.typed"]

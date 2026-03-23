@@ -20,6 +20,16 @@
     "picocolors": "^1.1.1",
     "yaml": "^2.8.2"
   },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Grumpy254/pactspec.git",
+    "directory": "cli"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["pactspec", "agent", "ai", "mcp", "cli", "validation", "registry"],
   "devDependencies": {
     "@types/node": "^22.0.0",
     "ts-node": "^10.9.2",

@@ -1,18 +1,6 @@
 import { createHash } from 'crypto';
 import type { TestResult } from '@/types/agent-spec';
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return '[' + value.map(stableStringify).join(',') + ']';
-  }
-  if (value !== null && typeof value === 'object') {
-    const sorted = Object.keys(value as object)
-      .sort()
-      .map((k) => JSON.stringify(k) + ':' + stableStringify((value as Record<string, unknown>)[k]));
-    return '{' + sorted.join(',') + '}';
-  }
-  return JSON.stringify(value);
-}
+import { stableStringify } from './stable-stringify';
 
 /**
  * Generate a deterministic SHA-256 attestation hash.

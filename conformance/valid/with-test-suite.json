@@ -1,0 +1,39 @@
+{
+  "_comment": "Skill with a testSuite URL for automated validation",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:healthco:icd-coder",
+  "name": "ICD-10 Code Lookup",
+  "version": "2.4.0",
+  "description": "Maps clinical descriptions to ICD-10-CM codes with a published test suite.",
+  "provider": {
+    "name": "HealthCo AI"
+  },
+  "endpoint": {
+    "url": "https://api.healthco.example.com/v2/icd"
+  },
+  "skills": [{
+    "id": "lookup-icd-code",
+    "name": "Lookup ICD Code",
+    "description": "Returns the most likely ICD-10-CM code for a clinical description.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["clinicalText"],
+      "properties": {
+        "clinicalText": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["icdCode", "description"],
+      "properties": {
+        "icdCode": { "type": "string", "pattern": "^[A-Z][0-9]{2}(\\.[0-9]{1,4})?$" },
+        "description": { "type": "string" },
+        "confidence": { "type": "number" }
+      }
+    },
+    "testSuite": {
+      "url": "https://healthco.example.com/tests/icd-coder-v2.json",
+      "type": "http-roundtrip"
+    }
+  }]
+}

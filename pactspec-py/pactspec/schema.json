@@ -24,7 +24,6 @@
       "properties": {
         "name":    { "type": "string" },
         "url":     { "type": "string", "format": "uri" },
-        "did":     { "type": "string" },
         "contact": { "type": "string", "format": "email" }
       }
     },
@@ -75,15 +74,6 @@
               "amount":   { "type": "number", "minimum": 0 },
               "currency": { "type": "string", "enum": ["USD", "USDC", "SOL"] },
               "protocol": { "type": "string", "enum": ["x402", "stripe", "none"] }
-            }
-          },
-          "sla": {
-            "type": "object",
-            "properties": {
-              "p50LatencyMs":   { "type": "integer", "minimum": 0 },
-              "p99LatencyMs":   { "type": "integer", "minimum": 0 },
-              "uptimeSLA":      { "type": "number", "minimum": 0, "maximum": 1 },
-              "maxConcurrency": { "type": "integer", "minimum": 1 }
             }
           },
           "testSuite": {

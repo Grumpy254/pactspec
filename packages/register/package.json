@@ -1,0 +1,45 @@
+{
+  "name": "@pactspec/register",
+  "version": "0.1.0",
+  "description": "Zero-config Express middleware that auto-publishes your agent to the PactSpec registry on startup",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Grumpy254/pactspec.git",
+    "directory": "packages/register"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "pactspec",
+    "agent",
+    "register",
+    "middleware",
+    "express",
+    "auto-publish",
+    "ai",
+    "registry"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
+  }
+}

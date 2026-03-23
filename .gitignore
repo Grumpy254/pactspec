@@ -45,4 +45,9 @@ cli/node_modules/
 cli/dist/
 sdk/node_modules/
 sdk/dist/
+packages/*/dist/
+packages/*/node_modules/
+pactspec-py/dist/
+pactspec-py/*.egg-info/
+pactspec-py/__pycache__/
 cli/test-source.*

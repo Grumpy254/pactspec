@@ -20,6 +20,10 @@ inputs:
     description: 'Your agent identifier (X-Agent-ID header). Required when publish: true.'
     required: false
     default: ''
+  publish-token:
+    description: 'Publish token (X-Publish-Token header). Required when registry requires auth.'
+    required: false
+    default: ''
   registry:
     description: 'PactSpec registry URL'
     required: false
@@ -43,33 +47,41 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
     - name: Install @pactspec/cli
       shell: bash
-      run: npm install -g @pactspec/cli@${{ inputs.cli-version }}
+      env:
+        CLI_VERSION: ${{ inputs.cli-version }}
+      run: npm install -g "@pactspec/cli@${CLI_VERSION}"
 
     - name: Validate spec
       id: validate
       shell: bash
+      env:
+        SPEC: ${{ inputs.spec }}
       run: |
-        if pactspec validate "${{ inputs.spec }}"; then
-          echo "valid=true" >> $GITHUB_OUTPUT
+        if pactspec validate "$SPEC"; then
+          echo "valid=true" >> "$GITHUB_OUTPUT"
         else
-          echo "valid=false" >> $GITHUB_OUTPUT
+          echo "valid=false" >> "$GITHUB_OUTPUT"
           exit 1
         fi
 
     - name: Run test suite
       shell: bash
+      env:
+        SPEC: ${{ inputs.spec }}
+        SKILL: ${{ inputs.skill }}
       run: |
-        SPEC="${{ inputs.spec }}"
-        SKILL="${{ inputs.skill }}"
-
         if [ -n "$SKILL" ]; then
           pactspec test "$SPEC" --skill "$SKILL"
         else
           # Extract all skill IDs from the spec and run each
           SKILLS=$(node -e "
-            const s = JSON.parse(require('fs').readFileSync('$SPEC','utf8'));
+            const s = JSON.parse(require('fs').readFileSync(process.env.SPEC, 'utf8'));
             const ids = s.skills
               .filter(sk => sk.testSuite && sk.testSuite.url)
               .map(sk => sk.id);
@@ -93,18 +105,24 @@ runs:
       id: publish
       if: inputs.publish == 'true'
       shell: bash
+      env:
+        SPEC: ${{ inputs.spec }}
+        AGENT_ID: ${{ inputs.agent-id }}
+        PUBLISH_TOKEN: ${{ inputs.publish-token }}
+        REGISTRY: ${{ inputs.registry }}
       run: |
-        if [ -z "${{ inputs.agent-id }}" ]; then
+        if [ -z "$AGENT_ID" ]; then
           echo "::error::publish: true requires agent-id to be set"
           exit 1
         fi
 
-        OUTPUT=$(pactspec publish "${{ inputs.spec }}" \
-          --agent-id "${{ inputs.agent-id }}" \
-          --registry "${{ inputs.registry }}" 2>&1)
+        ARGS=("$SPEC" --agent-id "$AGENT_ID" --registry "$REGISTRY")
+        if [ -n "$PUBLISH_TOKEN" ]; then ARGS+=(--publish-token "$PUBLISH_TOKEN"); fi
+
+        OUTPUT=$(pactspec publish "${ARGS[@]}" 2>&1)
         echo "$OUTPUT"
 
         # Extract registry URL from CLI output
         URL=$(echo "$OUTPUT" | grep -oE 'https://[^ ]+/agents/[^ ]+' | head -1)
-        echo "published=true" >> $GITHUB_OUTPUT
-        echo "agent-url=$URL" >> $GITHUB_OUTPUT
+        echo "published=true" >> "$GITHUB_OUTPUT"
+        echo "agent-url=$URL" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,17 @@
+{
+  "_comment": "Absolute minimum valid spec with explicit free pricing",
+  "specVersion": "1.0.0",
+  "id": "urn:pactspec:demo:echo",
+  "name": "Echo Agent",
+  "version": "0.1.0",
+  "provider": { "name": "Demo" },
+  "endpoint": { "url": "https://demo.example.com/echo" },
+  "skills": [{
+    "id": "echo",
+    "name": "Echo",
+    "description": "Returns the input unchanged.",
+    "inputSchema": { "type": "object" },
+    "outputSchema": { "type": "object" },
+    "pricing": { "model": "free", "amount": 0, "currency": "USD" }
+  }]
+}
