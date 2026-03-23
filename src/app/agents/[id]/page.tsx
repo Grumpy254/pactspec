@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useCallback } from 'react';
 import type { AgentRow, AgentSpecSkill } from '@/types/agent-spec';
+import { getVerificationAge, formatScoreAge } from '@/lib/trust-tier';
 
 interface PricingVerifyResult {
   skillId: string;
@@ -235,9 +236,19 @@ function BenchmarkResultsSection({ agentId }: { agentId: string }) {
                   <h3 className="font-semibold text-white text-sm">{r.benchmarks.name}</h3>
                   <span className="text-xs text-gray-500">{r.benchmarks.domain}</span>
                 </div>
-                <span className={`text-2xl font-bold font-mono ${scoreColor(r.score)}`}>
-                  {(r.score * 100).toFixed(1)}%
-                </span>
+                <div className="text-right">
+                  <span className={`text-2xl font-bold font-mono ${scoreColor(r.score)}`}>
+                    {(r.score * 100).toFixed(1)}%
+                  </span>
+                  {r.run_at && (() => {
+                    const age = formatScoreAge(r.run_at);
+                    return (
+                      <div className={`text-[10px] font-mono ${age.fresh ? 'text-emerald-500' : 'text-yellow-500'}`}>
+                        {age.label}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Score bar */}
@@ -256,8 +267,11 @@ function BenchmarkResultsSection({ agentId }: { agentId: string }) {
               </div>
 
               <div className="flex items-center justify-between mt-3">
-                <span className="text-xs text-gray-600">
-                  {new Date(r.run_at).toLocaleDateString()}
+                <span className="text-xs text-gray-600" title={new Date(r.run_at).toLocaleString()}>
+                  {(() => {
+                    const age = formatScoreAge(r.run_at);
+                    return <span className={age.fresh ? 'text-gray-500' : 'text-yellow-600'}>{age.label}</span>;
+                  })()}
                 </span>
                 <button
                   onClick={() => rerun(r.benchmark_id)}
@@ -336,11 +350,26 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-3xl font-bold text-white">{agent.name}</h1>
               <span className="text-gray-500 font-mono">v{agent.version}</span>
-              {agent.verified && (
-                <span className="inline-flex items-center gap-1 bg-emerald-900/50 text-emerald-400 text-sm px-3 py-0.5 rounded-full border border-emerald-800">
-                  Verified
-                </span>
-              )}
+              {(() => {
+                const va = getVerificationAge(agent);
+                if (va.tier === 'none') return null;
+                const colorMap = {
+                  emerald: 'bg-emerald-900/50 text-emerald-400 border-emerald-800',
+                  yellow: 'bg-yellow-900/50 text-yellow-400 border-yellow-800',
+                  red: 'bg-red-900/50 text-red-400 border-red-800',
+                  gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
+                };
+                const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
+                const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+                return (
+                  <>
+                    <span className={`inline-flex items-center gap-1 text-sm px-3 py-0.5 rounded-full border ${colorMap[va.color]}`}>
+                      {va.label}
+                    </span>
+                    <span className={`text-xs ${tierColor}`}>{tierLabel}</span>
+                  </>
+                );
+              })()}
             </div>
             <p className="text-gray-400">{agent.description ?? agent.spec_id}</p>
           </div>
@@ -382,11 +411,16 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           <div>
             <p className="text-sm text-emerald-400 font-medium mb-1">Verified Record (SHA-256 fingerprint)</p>
             <p className="text-xs text-gray-400 font-mono break-all">{agent.attestation_hash}</p>
-            {agent.verified_at && (
-              <p className="text-xs text-gray-500 mt-1">
-                Verified at {new Date(agent.verified_at).toLocaleString()}
-              </p>
-            )}
+            {agent.verified_at && (() => {
+              const va = getVerificationAge(agent);
+              const ageColor = va.color === 'emerald' ? 'text-emerald-400' : va.color === 'yellow' ? 'text-yellow-400' : va.color === 'red' ? 'text-red-400' : 'text-gray-500';
+              return (
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className={ageColor}>{va.label}</span>
+                  {' '}— {new Date(agent.verified_at).toLocaleString()}
+                </p>
+              );
+            })()}
             <p className="text-xs text-gray-600 mt-1">
               Tamper-evident record — changes if agent ID, skill, results, or timestamp changes. Not a cryptographic signature.
             </p>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { AgentRow } from '@/types/agent-spec';
+import { getVerificationAge } from '@/lib/trust-tier';
 
 type SortOption = 'relevance' | 'price-asc' | 'price-desc' | 'pass-rate';
 
@@ -31,11 +32,26 @@ function AgentCard({ agent, highlightPricing }: { agent: AgentRow; highlightPric
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h2 className="font-semibold text-white truncate">{agent.name}</h2>
             <span className="text-xs text-gray-500 font-mono shrink-0">v{agent.version}</span>
-            {agent.verified && (
-              <span className="shrink-0 inline-flex items-center gap-1 bg-emerald-900/50 text-emerald-400 text-xs px-2 py-0.5 rounded-full border border-emerald-800">
-                Verified
-              </span>
-            )}
+            {(() => {
+              const va = getVerificationAge(agent);
+              if (va.tier === 'none') return null;
+              const colorMap = {
+                emerald: 'bg-emerald-900/50 text-emerald-400 border-emerald-800',
+                yellow: 'bg-yellow-900/50 text-yellow-400 border-yellow-800',
+                red: 'bg-red-900/50 text-red-400 border-red-800',
+                gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
+              };
+              const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
+              const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+              return (
+                <>
+                  <span className={`shrink-0 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${colorMap[va.color]}`}>
+                    {va.label}
+                  </span>
+                  <span className={`shrink-0 text-[10px] ${tierColor}`}>{tierLabel}</span>
+                </>
+              );
+            })()}
             {isFree && (
               <span className="shrink-0 inline-flex items-center bg-emerald-900/40 text-emerald-300 text-xs font-medium px-2 py-0.5 rounded-full border border-emerald-800/50">
                 Free
@@ -107,11 +123,21 @@ function MonetizedAgentCard({ agent }: { agent: AgentRow }) {
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold text-white text-sm truncate">{agent.name}</h3>
-        {agent.verified && (
-          <span className="shrink-0 inline-flex items-center gap-1 bg-emerald-900/50 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded-full border border-emerald-800">
-            Verified
-          </span>
-        )}
+        {(() => {
+          const va = getVerificationAge(agent);
+          if (va.tier === 'none') return null;
+          const colorMap = {
+            emerald: 'bg-emerald-900/50 text-emerald-400 border-emerald-800',
+            yellow: 'bg-yellow-900/50 text-yellow-400 border-yellow-800',
+            red: 'bg-red-900/50 text-red-400 border-red-800',
+            gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
+          };
+          return (
+            <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border ${colorMap[va.color]}`}>
+              {va.label}
+            </span>
+          );
+        })()}
       </div>
       <p className="text-xs text-gray-500 mb-3 truncate">{agent.provider_name}</p>
       {pricing && (

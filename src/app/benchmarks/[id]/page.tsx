@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
+import { formatScoreAge } from '@/lib/trust-tier';
 
 interface BenchmarkRow {
   id: string;
@@ -234,8 +235,11 @@ export default function BenchmarkDetailPage({ params }: { params: Promise<{ id: 
                       <span className="inline-block w-2 h-2 rounded-full bg-gray-700" title="Not verified" />
                     )}
                   </td>
-                  <td className="px-5 py-3 text-right text-xs text-gray-500">
-                    {new Date(entry.run_at).toLocaleDateString()}
+                  <td className="px-5 py-3 text-right text-xs" title={new Date(entry.run_at).toLocaleString()}>
+                    {(() => {
+                      const age = formatScoreAge(entry.run_at);
+                      return <span className={age.fresh ? 'text-gray-500' : 'text-yellow-500'}>{age.label}</span>;
+                    })()}
                   </td>
                 </tr>
               ))}
