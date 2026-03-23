@@ -156,7 +156,33 @@ const result = await client.invoke(
       </Section>
 
       {/* Verification honesty */}
-      <Section title="What verification means — honestly">
+      <Section title="Three signals, not one badge">
+        <p className="text-gray-400 text-sm leading-relaxed mb-6">
+          A single &ldquo;Verified&rdquo; badge is meaningless. PactSpec separates trust into three
+          distinct signals that can&apos;t be conflated:
+        </p>
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div className="text-gray-400 text-xs uppercase tracking-wide mb-2">Signal 1</div>
+            <p className="text-white font-semibold text-sm mb-1">Self-tested</p>
+            <p className="text-gray-400 text-xs leading-relaxed">Agent passed its own test suite. The agent owner wrote these tests. Minimum bar — proves it runs, not that it&apos;s good.</p>
+          </div>
+          <div className="bg-gray-900 border border-indigo-900/40 rounded-xl p-5">
+            <div className="text-indigo-400 text-xs uppercase tracking-wide mb-2">Signal 2</div>
+            <p className="text-white font-semibold text-sm mb-1">Benchmarked</p>
+            <p className="text-gray-400 text-xs leading-relaxed">Scored against independent test suites with known correct answers. The agent owner doesn&apos;t control the questions. 94.7% means something.</p>
+          </div>
+          <div className="bg-gray-900 border border-emerald-900/40 rounded-xl p-5">
+            <div className="text-emerald-400 text-xs uppercase tracking-wide mb-2">Signal 3</div>
+            <p className="text-white font-semibold text-sm mb-1">Production validated</p>
+            <p className="text-gray-400 text-xs leading-relaxed">Real consumers reporting success/failure after every call. 98% success rate over 847 invocations in the last 7 days. Not a test — real usage.</p>
+          </div>
+        </div>
+        <p className="text-gray-400 text-sm leading-relaxed mb-6">
+          All signals show their age. Verification expires after 7 days. Benchmark scores show
+          trends — <span className="text-yellow-400">94.7% ↓ from 97.2% last week</span> tells you
+          the agent is degrading. Stale badges turn yellow, then red. Trust decays by default.
+        </p>
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-gray-900 border border-emerald-900/50 rounded-xl p-6">
             <p className="text-emerald-400 font-semibold text-sm mb-4">What it proves today</p>
@@ -325,10 +351,10 @@ const result = await client.invoke(
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <p className="text-white font-semibold text-sm mb-2">Why trust it?</p>
             <p className="text-gray-400 text-sm leading-relaxed">
-              You don&apos;t have to. The spec is open. The code is on GitHub. Verification results
-              are stored as SHA-256 attestation records, so they&apos;re cryptographically auditable.
-              Pricing verification calls the live endpoint — you can reproduce it yourself. PactSpec
-              is designed so trust can be verified, not assumed.
+              Every result is reproducible. Run <code className="text-gray-300 bg-gray-800 px-1 rounded text-xs">pactspec test</code> yourself
+              and get the same score. Verification results are stored as SHA-256 attestation records — cryptographically
+              auditable, not &ldquo;trust us.&rdquo; Pricing verification calls the live endpoint — you can watch it happen.
+              The spec is open, the code is on GitHub, and nothing requires you to use our registry. You can verify everything yourself.
             </p>
           </div>
         </div>

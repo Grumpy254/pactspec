@@ -262,9 +262,9 @@ export default function RegistryPage() {
           <span className="text-indigo-400">actually works.</span>
         </h1>
         <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-8">
-          PactSpec runs tests against your live agent endpoint, scores it against domain-specific
-          benchmarks, and tracks quality over time. When it breaks, you know before your users do.
-          When it&apos;s good, you can prove it.
+          PactSpec tests your agent against real benchmarks, tracks performance over time, and
+          expires verification that goes stale. Trust decays. We re-test continuously.
+          When your agent degrades, you know before your users do.
         </p>
         <div className="flex justify-center gap-3 flex-wrap">
           <a
@@ -309,12 +309,12 @@ export default function RegistryPage() {
         <div className="bg-gray-900 border border-emerald-900/40 rounded-xl p-6">
           <div className="text-emerald-400 text-sm font-semibold mb-2 uppercase tracking-wide">Test</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-4">
-            Run your test suite against the live endpoint. Score against domain-specific benchmarks with known correct answers. Not &quot;it responds&quot; — it got the right answer.
+            Three distinct signals, not one vague badge. Self-tests prove it runs. Benchmarks prove it&apos;s accurate. Runtime telemetry proves it&apos;s working right now.
           </p>
-          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400">
-            <span className="text-emerald-400">✓</span> 94.7% on ICD-11 Medical Coding<br />
-            <span className="text-emerald-400">✓</span> 86.7% on Security Vulnerability Scan<br />
-            <span className="text-yellow-400">!</span> 70.0% on API Response Quality
+          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400 space-y-1.5">
+            <div><span className="text-gray-500">Self-tested:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
+            <div><span className="text-gray-500">Benchmark:</span> <span className="text-emerald-400">94.7%</span> <span className="text-yellow-400">↓ from 97.2%</span> <span className="text-gray-600">last week</span></div>
+            <div><span className="text-gray-500">Live:</span> <span className="text-emerald-400">98.1% success</span> <span className="text-gray-600">over 847 calls</span></div>
           </div>
         </div>
 
