@@ -14,7 +14,21 @@ interface PricingVerifyResult {
   error?: string;
 }
 
-function SkillPanel({ skill, agentId, pricingResult }: { skill: AgentSpecSkill; agentId: string; pricingResult?: PricingVerifyResult }) {
+interface PricingDriftInfo {
+  pricing_drift_detected?: boolean;
+  pricing_last_checked_at?: string | null;
+}
+
+interface LatestPricingCheck {
+  skill_id: string;
+  declared_amount: number | null;
+  actual_amount: string | null;
+  drift_percentage: number | null;
+  match: boolean;
+  checked_at: string;
+}
+
+function SkillPanel({ skill, agentId, pricingResult, driftInfo, latestCheck }: { skill: AgentSpecSkill; agentId: string; pricingResult?: PricingVerifyResult; driftInfo?: PricingDriftInfo; latestCheck?: LatestPricingCheck }) {
   const [validating, setValidating] = useState(false);
   const [result, setResult] = useState<{ status: string; attestationHash?: string; error?: string } | null>(null);
 
@@ -85,6 +99,36 @@ function SkillPanel({ skill, agentId, pricingResult }: { skill: AgentSpecSkill; 
                   ? 'Pricing unverified'
                   : 'Pricing unverified'}
               </span>
+            )}
+            {/* Pricing drift detection badges */}
+            {driftInfo?.pricing_drift_detected && latestCheck && !latestCheck.match && (
+              <div className="mt-2">
+                <span className="inline-block text-xs px-2 py-0.5 rounded bg-red-900/50 text-red-400 border border-red-800 font-medium">
+                  Price drift detected
+                </span>
+                <p className="text-xs text-red-400/80 mt-1">
+                  Declared: ${skill.pricing?.amount ?? '?'} | Last checked: ${latestCheck.actual_amount ?? '?'}
+                  {latestCheck.drift_percentage != null && ` (${latestCheck.drift_percentage.toFixed(0)}% drift)`}
+                </p>
+                <button
+                  onClick={() => {
+                    fetch(`/api/agents/${agentId}/verify-pricing`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                  }}
+                  className="text-xs text-red-400 underline mt-1 hover:text-red-300"
+                >
+                  Re-check pricing
+                </button>
+              </div>
+            )}
+            {driftInfo?.pricing_last_checked_at && !driftInfo.pricing_drift_detected && (
+              <div className="mt-2">
+                <span className="inline-block text-xs px-2 py-0.5 rounded bg-emerald-900/30 text-emerald-400 border border-emerald-800/50">
+                  Price verified {'\u2713'}
+                </span>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Checked {new Date(driftInfo.pricing_last_checked_at).toLocaleDateString()}
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -296,6 +340,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const [error, setError] = useState('');
   const [verifyingPricing, setVerifyingPricing] = useState(false);
   const [pricingResults, setPricingResults] = useState<PricingVerifyResult[]>([]);
+  const [latestPricingChecks, setLatestPricingChecks] = useState<LatestPricingCheck[]>([]);
 
   useEffect(() => {
     fetch(`/api/agents/${id}`)
@@ -304,8 +349,18 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         return r.json();
       })
       .then((d) => {
-        if (d.agent) setAgent(d.agent);
-        else setError(d.error ?? 'Not found');
+        if (d.agent) {
+          setAgent(d.agent);
+          // Fetch latest pricing checks for this agent
+          if (d.agent.pricing_last_checked_at) {
+            fetch(`/api/agents/${d.agent.id}/pricing-checks`)
+              .then((r) => r.ok ? r.json() : null)
+              .then((data) => { if (data?.checks) setLatestPricingChecks(data.checks); })
+              .catch(() => {});
+          }
+        } else {
+          setError(d.error ?? 'Not found');
+        }
       })
       .catch(() => setError('Failed to load agent'))
       .finally(() => setLoading(false));
@@ -359,8 +414,8 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                   red: 'bg-red-900/50 text-red-400 border-red-800',
                   gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
                 };
-                const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
-                const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+                const tierLabel = va.tier === 'production-validated' ? 'Production validated' : va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
+                const tierColor = va.tier === 'production-validated' ? 'text-emerald-300' : va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
                 return (
                   <>
                     <span className={`inline-flex items-center gap-1 text-sm px-3 py-0.5 rounded-full border ${colorMap[va.color]}`}>
@@ -490,12 +545,89 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             skill={skill}
             agentId={agent.id}
             pricingResult={pricingResults.find((r) => r.skillId === skill.id)}
+            driftInfo={{
+              pricing_drift_detected: agent.pricing_drift_detected,
+              pricing_last_checked_at: agent.pricing_last_checked_at,
+            }}
+            latestCheck={latestPricingChecks.find((c) => c.skill_id === skill.id)}
           />
         ))}
       </div>
 
       {/* Benchmark Results */}
       <BenchmarkResultsSection agentId={agent.id} />
+
+      {/* Runtime Performance (Telemetry) */}
+      {(agent.telemetry_total_invocations ?? 0) > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold text-white mb-4">Runtime Performance</h2>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            {/* Success rate bars */}
+            <div className="space-y-4 mb-6">
+              {([
+                { label: '24h', value: agent.telemetry_success_rate_24h },
+                { label: '7d', value: agent.telemetry_success_rate_7d },
+                { label: '30d', value: agent.telemetry_success_rate_30d },
+              ] as const).map(({ label, value }) => {
+                if (value == null) return null;
+                const pct = Math.round(value * 100);
+                const barColor = pct > 95 ? 'bg-emerald-500' : pct > 80 ? 'bg-yellow-500' : 'bg-red-500';
+                const textColor = pct > 95 ? 'text-emerald-400' : pct > 80 ? 'text-yellow-400' : 'text-red-400';
+                return (
+                  <div key={label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-400">Success rate ({label})</span>
+                      <span className={`text-sm font-mono font-semibold ${textColor}`}>{pct}%</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${barColor}`}
+                        style={{ width: `${Math.max(pct, 1)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Latency + invocations */}
+            <div className="grid grid-cols-3 gap-4">
+              {agent.telemetry_latency_p50_ms != null && (
+                <div className="bg-gray-950 rounded-lg p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">Latency p50</div>
+                  <div className="text-lg font-mono font-bold text-white">{agent.telemetry_latency_p50_ms}<span className="text-xs text-gray-500 ml-0.5">ms</span></div>
+                </div>
+              )}
+              {agent.telemetry_latency_p95_ms != null && (
+                <div className="bg-gray-950 rounded-lg p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">Latency p95</div>
+                  <div className="text-lg font-mono font-bold text-white">{agent.telemetry_latency_p95_ms}<span className="text-xs text-gray-500 ml-0.5">ms</span></div>
+                </div>
+              )}
+              <div className="bg-gray-950 rounded-lg p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Total invocations</div>
+                <div className="text-lg font-mono font-bold text-white">{(agent.telemetry_total_invocations ?? 0).toLocaleString()}</div>
+              </div>
+            </div>
+
+            {/* Last updated */}
+            {agent.telemetry_updated_at && (
+              <div className="mt-4 text-xs text-gray-600">
+                Last updated: {(() => {
+                  const mins = Math.floor((Date.now() - new Date(agent.telemetry_updated_at).getTime()) / 60000);
+                  if (mins < 1) return 'just now';
+                  if (mins === 1) return '1 minute ago';
+                  if (mins < 60) return `${mins} minutes ago`;
+                  const hours = Math.floor(mins / 60);
+                  if (hours === 1) return '1 hour ago';
+                  if (hours < 24) return `${hours} hours ago`;
+                  return `${Math.floor(hours / 24)} days ago`;
+                })()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Raw spec */}
       <details>

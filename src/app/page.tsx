@@ -41,8 +41,8 @@ function AgentCard({ agent, highlightPricing }: { agent: AgentRow; highlightPric
                 red: 'bg-red-900/50 text-red-400 border-red-800',
                 gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
               };
-              const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
-              const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+              const tierLabel = va.tier === 'production-validated' ? 'Production validated' : va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
+              const tierColor = va.tier === 'production-validated' ? 'text-emerald-300' : va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
               return (
                 <>
                   <span className={`shrink-0 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${colorMap[va.color]}`}>
@@ -75,6 +75,14 @@ function AgentCard({ agent, highlightPricing }: { agent: AgentRow; highlightPric
                 {pricingSkill.pricing.protocol}
               </span>
             )}
+            {agent.pricing_drift_detected && (
+              <span
+                className="shrink-0 inline-flex items-center text-xs px-2 py-0.5 rounded-full border bg-red-900/50 text-red-400 border-red-800"
+                title="Declared price does not match what the endpoint actually charges"
+              >
+                {'\u26A0'} Price drift
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-400 truncate">{agent.description ?? agent.spec_id}</p>
         </div>
@@ -102,6 +110,17 @@ function AgentCard({ agent, highlightPricing }: { agent: AgentRow; highlightPric
           ))}
         </div>
         <div className="flex items-center gap-3">
+          {(agent.telemetry_total_invocations ?? 0) > 0 && agent.telemetry_success_rate_7d != null && (() => {
+            const pct = Math.round(agent.telemetry_success_rate_7d * 100);
+            const dotColor = pct > 95 ? 'bg-emerald-400' : pct > 80 ? 'bg-yellow-400' : 'bg-red-400';
+            const textColor = pct > 95 ? 'text-emerald-400' : pct > 80 ? 'text-yellow-400' : 'text-red-400';
+            return (
+              <span className={`inline-flex items-center gap-1 font-mono ${textColor}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                {pct}% live
+              </span>
+            );
+          })()}
           {passRate != null && (
             <span className="text-emerald-400 font-mono">{Math.round(passRate * 100)}% pass</span>
           )}
@@ -148,6 +167,14 @@ function MonetizedAgentCard({ agent }: { agent: AgentRow }) {
           {pricing.protocol && pricing.protocol !== 'none' && (
             <span className="inline-flex items-center text-[10px] text-indigo-300 bg-indigo-900/40 px-1.5 py-0.5 rounded border border-indigo-800/50">
               {pricing.protocol}
+            </span>
+          )}
+          {agent.pricing_drift_detected && (
+            <span
+              className="inline-flex items-center text-[10px] text-red-400 bg-red-900/50 px-1.5 py-0.5 rounded border border-red-800"
+              title="Declared price does not match what the endpoint actually charges"
+            >
+              {'\u26A0'} Drift
             </span>
           )}
         </div>

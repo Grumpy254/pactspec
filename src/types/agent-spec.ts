@@ -127,9 +127,18 @@ export interface AgentRow {
   delegated_from?: string | null;
   pricing_verified?: boolean;
   pricing_verified_at?: string | null;
+  pricing_drift_detected?: boolean;
+  pricing_last_checked_at?: string | null;
   published_at: string;
   updated_at: string;
   benchmark_results?: BenchmarkResult[];
+  telemetry_success_rate_24h?: number | null;
+  telemetry_success_rate_7d?: number | null;
+  telemetry_success_rate_30d?: number | null;
+  telemetry_latency_p50_ms?: number | null;
+  telemetry_latency_p95_ms?: number | null;
+  telemetry_total_invocations?: number | null;
+  telemetry_updated_at?: string | null;
 }
 
 // Test suite format agents publish at testSuite.url
