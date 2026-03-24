@@ -51,3 +51,4 @@ pactspec-py/dist/
 pactspec-py/*.egg-info/
 pactspec-py/__pycache__/
 cli/test-source.*
+.local-*
