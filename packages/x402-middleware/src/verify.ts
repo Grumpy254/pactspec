@@ -11,10 +11,6 @@
 
 import type { PaymentVerifier, PaymentExpectation } from './types.js';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const USDC_DECIMALS = 6;
 const SOL_DECIMALS = 9;
 const ETH_DECIMALS = 18;
@@ -35,11 +31,6 @@ const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111';
 /** Solana SPL Token Program ID */
 const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Make a JSON-RPC call via fetch with a 10-second timeout. */
 async function jsonRpc(
   url: string,
   method: string,
@@ -65,14 +56,9 @@ async function jsonRpc(
   return json.result;
 }
 
-/** Case-insensitive hex address comparison. */
 function addressEq(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
-
-// ---------------------------------------------------------------------------
-// Mock verifier (development / testing)
-// ---------------------------------------------------------------------------
 
 /**
  * Creates a mock payment verifier that approves any non-empty transaction
@@ -80,28 +66,12 @@ function addressEq(a: string, b: string): boolean {
  *
  * **Do not use in production.** This is intended for local development and
  * automated tests only.
- *
- * @example
- * ```ts
- * import { x402Middleware, createMockVerifier } from '@pactspec/x402-middleware';
- *
- * app.use(x402Middleware({
- *   payTo: '...',
- *   pricing: { amount: 1000, currency: 'USDC', network: 'solana-devnet' },
- *   verifyPayment: createMockVerifier(),
- * }));
- * ```
  */
 export function createMockVerifier(): PaymentVerifier {
   return async (txHash: string, _expected: PaymentExpectation): Promise<boolean> => {
-    // Accept any truthy, non-whitespace transaction hash.
     return typeof txHash === 'string' && txHash.trim().length > 0;
   };
 }
-
-// ---------------------------------------------------------------------------
-// Solana verifier
-// ---------------------------------------------------------------------------
 
 /**
  * Creates a Solana payment verifier that checks an on-chain transaction
@@ -112,30 +82,15 @@ export function createMockVerifier(): PaymentVerifier {
  * `getTransaction` method — no SDK dependencies.
  *
  * @param rpcUrl - Solana JSON-RPC endpoint (e.g. `https://api.mainnet-beta.solana.com`)
- *
- * @example
- * ```ts
- * import { x402Middleware, createSolanaVerifier } from '@pactspec/x402-middleware';
- *
- * app.use(x402Middleware({
- *   payTo: 'So1anaWa11etAddressHere111111111111111111111',
- *   pricing: { amount: 1000, currency: 'USDC', network: 'solana-mainnet' },
- *   verifyPayment: createSolanaVerifier('https://api.mainnet-beta.solana.com'),
- * }));
- * ```
  */
 export function createSolanaVerifier(rpcUrl: string): PaymentVerifier {
   return async (txHash: string, expected: PaymentExpectation): Promise<boolean> => {
-    // 1. Fetch the transaction
     const result = (await jsonRpc(rpcUrl, 'getTransaction', [
       txHash,
       { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
     ])) as SolanaTransactionResult | null;
 
-    // 2. Transaction must exist
     if (!result) return false;
-
-    // 3. Transaction must have succeeded (no error)
     if (result.meta?.err !== null) return false;
 
     const instructions: SolanaParsedInstruction[] =
@@ -143,7 +98,6 @@ export function createSolanaVerifier(rpcUrl: string): PaymentVerifier {
     const innerInstructions: SolanaInnerInstruction[] =
       result.meta?.innerInstructions ?? [];
 
-    // Flatten all instructions (top-level + inner)
     const allInstructions: SolanaParsedInstruction[] = [
       ...instructions,
       ...innerInstructions.flatMap((ii) => ii.instructions ?? []),
@@ -153,12 +107,10 @@ export function createSolanaVerifier(rpcUrl: string): PaymentVerifier {
       return verifySolanaTokenTransfer(allInstructions, expected);
     }
 
-    // SOL native transfer
     return verifySolanaNativeTransfer(allInstructions, expected);
   };
 }
 
-/** Check for an SPL token transfer matching the expected USDC payment. */
 function verifySolanaTokenTransfer(
   instructions: SolanaParsedInstruction[],
   expected: PaymentExpectation,
@@ -177,24 +129,19 @@ function verifySolanaTokenTransfer(
     const info = parsed.info;
     if (!info) continue;
 
-    // For transferChecked, the mint is available directly
     if (type === 'transferChecked' && info.mint && info.mint !== USDC_SOLANA_MINT) {
       continue;
     }
 
-    // Destination must match expected payTo
     const destination: string = info.destination ?? '';
     if (destination !== expected.payTo) continue;
 
-    // Amount check — parsed amounts are strings representing UI amounts
-    // or raw token amounts depending on the field
     const amount = parseFloat(
       type === 'transferChecked'
         ? info.tokenAmount?.uiAmountString ?? '0'
         : info.amount ?? '0',
     );
 
-    // For plain 'transfer', amount is in raw lamport-style units
     const normalizedAmount =
       type === 'transfer' ? amount / 10 ** USDC_DECIMALS : amount;
 
@@ -206,7 +153,6 @@ function verifySolanaTokenTransfer(
   return false;
 }
 
-/** Check for a native SOL transfer matching the expected payment. */
 function verifySolanaNativeTransfer(
   instructions: SolanaParsedInstruction[],
   expected: PaymentExpectation,
@@ -235,8 +181,6 @@ function verifySolanaNativeTransfer(
   return false;
 }
 
-// Solana JSON-RPC response types (minimal, for jsonParsed encoding)
-
 interface SolanaTransactionResult {
   meta: {
     err: unknown;
@@ -261,16 +205,9 @@ interface SolanaParsedInstruction {
   };
 }
 
-// ---------------------------------------------------------------------------
-// EVM verifier (Base, Ethereum, Arbitrum, etc.)
-// ---------------------------------------------------------------------------
-
 /**
  * Creates an EVM-compatible payment verifier that works with any chain
  * supporting standard Ethereum JSON-RPC (Base, Ethereum, Arbitrum, etc.).
- *
- * Verifies transactions by fetching the receipt via `eth_getTransactionReceipt`
- * and, for native ETH transfers, the transaction itself via `eth_getTransactionByHash`.
  *
  * Supports:
  * - **USDC (ERC-20):** Parses Transfer event logs to verify recipient and amount.
@@ -278,36 +215,16 @@ interface SolanaParsedInstruction {
  *
  * @param rpcUrl - Ethereum JSON-RPC endpoint
  * @param usdcContract - Optional USDC contract address override (defaults to Base USDC)
- *
- * @example
- * ```ts
- * import { x402Middleware, createEthVerifier } from '@pactspec/x402-middleware';
- *
- * // Base
- * app.use(x402Middleware({
- *   payTo: '0xYourAddress',
- *   pricing: { amount: 1000, currency: 'USDC', network: 'base' },
- *   verifyPayment: createEthVerifier('https://mainnet.base.org'),
- * }));
- *
- * // Ethereum mainnet with custom USDC address
- * const verifier = createEthVerifier(
- *   'https://eth.llamarpc.com',
- *   '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC on Ethereum
- * );
- * ```
  */
 export function createEthVerifier(
   rpcUrl: string,
   usdcContract: string = USDC_BASE_CONTRACT,
 ): PaymentVerifier {
   return async (txHash: string, expected: PaymentExpectation): Promise<boolean> => {
-    // 1. Fetch the transaction receipt
     const receipt = (await jsonRpc(rpcUrl, 'eth_getTransactionReceipt', [
       txHash,
     ])) as EvmReceipt | null;
 
-    // 2. Receipt must exist and transaction must have succeeded
     if (!receipt) return false;
     if (receipt.status !== '0x1') return false;
 
@@ -315,7 +232,6 @@ export function createEthVerifier(
       return verifyEvmTokenTransfer(receipt, expected, usdcContract);
     }
 
-    // Native ETH transfer — need the transaction itself for the value
     const tx = (await jsonRpc(rpcUrl, 'eth_getTransactionByHash', [
       txHash,
     ])) as EvmTransaction | null;
@@ -326,7 +242,6 @@ export function createEthVerifier(
   };
 }
 
-/** Verify an ERC-20 USDC transfer from receipt logs. */
 function verifyEvmTokenTransfer(
   receipt: EvmReceipt,
   expected: PaymentExpectation,
@@ -336,19 +251,15 @@ function verifyEvmTokenTransfer(
   const requiredRaw = BigInt(Math.round(expected.amount * 10 ** USDC_DECIMALS));
 
   for (const log of logs) {
-    // Must be from the USDC contract
     if (!addressEq(log.address, usdcContract)) continue;
 
-    // Must be a Transfer event
     const topics = log.topics ?? [];
     if (topics.length < 3) continue;
     if (topics[0] !== TRANSFER_EVENT_TOPIC) continue;
 
-    // topics[1] = from (padded to 32 bytes), topics[2] = to (padded to 32 bytes)
     const toAddress = '0x' + (topics[2] ?? '').slice(26);
     if (!addressEq(toAddress, expected.payTo)) continue;
 
-    // data = uint256 value (hex)
     const value = BigInt(log.data ?? '0x0');
     if (value >= requiredRaw) {
       return true;
@@ -358,7 +269,6 @@ function verifyEvmTokenTransfer(
   return false;
 }
 
-/** Verify a native ETH transfer. */
 function verifyEvmNativeTransfer(
   tx: EvmTransaction,
   expected: PaymentExpectation,
@@ -370,8 +280,6 @@ function verifyEvmNativeTransfer(
 
   return value >= requiredWei;
 }
-
-// Minimal EVM JSON-RPC types
 
 interface EvmReceipt {
   status: string;
@@ -390,26 +298,11 @@ interface EvmTransaction {
   value?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Base verifier (convenience alias for createEthVerifier on Base)
-// ---------------------------------------------------------------------------
-
 /**
  * Creates a payment verifier for Base network. This is a convenience wrapper
  * around {@link createEthVerifier} pre-configured with the Base USDC contract.
  *
  * @param rpcUrl - Base JSON-RPC endpoint (e.g. `https://mainnet.base.org`)
- *
- * @example
- * ```ts
- * import { x402Middleware, createBaseVerifier } from '@pactspec/x402-middleware';
- *
- * app.use(x402Middleware({
- *   payTo: '0xYourAddress',
- *   pricing: { amount: 1000, currency: 'USDC', network: 'base' },
- *   verifyPayment: createBaseVerifier('https://mainnet.base.org'),
- * }));
- * ```
  */
 export function createBaseVerifier(rpcUrl: string): PaymentVerifier {
   return createEthVerifier(rpcUrl, USDC_BASE_CONTRACT);

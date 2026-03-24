@@ -7,45 +7,26 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-// ---------------------------------------------------------------------------
-// Currency & network
-// ---------------------------------------------------------------------------
-
-/** Currencies supported by the x402 payment flow. */
 export type PaymentCurrency = 'USDC' | 'SOL';
 
-/** Blockchain networks the middleware can target. */
 export type PaymentNetwork =
   | 'solana-mainnet'
   | 'solana-devnet'
   | 'base'
   | 'base-sepolia';
 
-// ---------------------------------------------------------------------------
-// Pricing config (mirrors PactSpec AgentSpecPricing subset)
-// ---------------------------------------------------------------------------
-
 /** Pricing parameters attached to an endpoint or skill. */
 export interface PricingConfig {
   /** Price in the smallest currency unit (e.g. lamports for SOL, 6-decimal units for USDC). */
   amount: number;
-  /** Payment currency. */
   currency: PaymentCurrency;
-  /** Target blockchain network. */
   network: PaymentNetwork;
 }
 
-// ---------------------------------------------------------------------------
-// Payment challenge (402 response body)
-// ---------------------------------------------------------------------------
-
 /** JSON body returned in an HTTP 402 response. */
 export interface PaymentChallenge {
-  /** Price in smallest unit. */
   amount: number;
-  /** Currency identifier. */
   currency: PaymentCurrency;
-  /** Blockchain network. */
   network: PaymentNetwork;
   /** Wallet address that should receive the payment. */
   payTo: string;
@@ -55,21 +36,11 @@ export interface PaymentChallenge {
   expiresAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Payment proof (what the client sends back)
-// ---------------------------------------------------------------------------
-
 /** Decoded content of the X-Payment-Proof header. */
 export interface PaymentProof {
-  /** On-chain transaction hash proving payment. */
   txHash: string;
-  /** The paymentId this proof corresponds to. */
   paymentId: string;
 }
-
-// ---------------------------------------------------------------------------
-// Payment expectation (passed to verifier)
-// ---------------------------------------------------------------------------
 
 /** What the verifier should check the transaction against. */
 export interface PaymentExpectation {
@@ -79,10 +50,6 @@ export interface PaymentExpectation {
   payTo: string;
   paymentId: string;
 }
-
-// ---------------------------------------------------------------------------
-// Payment record (emitted after successful verification)
-// ---------------------------------------------------------------------------
 
 /** Record of a verified payment, emitted via the onPaymentReceived callback. */
 export interface PaymentRecord {
@@ -95,10 +62,6 @@ export interface PaymentRecord {
   verifiedAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Verifier
-// ---------------------------------------------------------------------------
-
 /**
  * A function that verifies an on-chain transaction matches the expected
  * payment parameters. Return `true` if the payment is valid.
@@ -107,10 +70,6 @@ export type PaymentVerifier = (
   txHash: string,
   expected: PaymentExpectation,
 ) => Promise<boolean>;
-
-// ---------------------------------------------------------------------------
-// Skip predicate
-// ---------------------------------------------------------------------------
 
 /** Minimal request shape used by the skip predicate. */
 export interface MinimalRequest {
@@ -125,16 +84,11 @@ export interface MinimalRequest {
  */
 export type SkipPredicate = (req: MinimalRequest) => boolean;
 
-// ---------------------------------------------------------------------------
-// Middleware options
-// ---------------------------------------------------------------------------
-
 /** Configuration for the x402 middleware. */
 export interface X402Options {
   /** Wallet address that receives payments. */
   payTo: string;
 
-  /** Pricing parameters for this endpoint. */
   pricing: PricingConfig;
 
   /**
@@ -166,16 +120,11 @@ export interface X402Options {
   deduplicationTtlMs?: number;
 }
 
-// ---------------------------------------------------------------------------
-// Framework-agnostic handler types
-// ---------------------------------------------------------------------------
-
 /**
  * Minimal request interface compatible with Node http.IncomingMessage,
  * Express Request, and Fastify Request.
  */
 export interface MiddlewareRequest extends IncomingMessage {
-  /** Parsed URL path — may be set by frameworks like Express. */
   path?: string;
 }
 

@@ -9,7 +9,6 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 // Bundled schema — always available regardless of install location
 import bundledSchema from './schema.json';
 
-// ── Types used by the test runner ─────────────────────────────────────────────
 interface TestCase {
   id: string;
   description?: string;
@@ -49,7 +48,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-// ── validate ─────────────────────────────────────────────────────────────────
 program
   .command('validate <file>')
   .description('Validate a PactSpec JSON file against the v1 schema')
@@ -81,7 +79,6 @@ program
     }
   });
 
-// ── publish ───────────────────────────────────────────────────────────────────
 program
   .command('publish <file>')
   .description('Publish a PactSpec JSON file to the registry')
@@ -139,7 +136,6 @@ program
     }
   });
 
-// ── bulk-publish ─────────────────────────────────────────────────────────────
 function collectSpecFiles(dir: string, recursive: boolean): string[] {
   const results: string[] = [];
   const entries = readdirSync(dir);
@@ -301,7 +297,6 @@ program
     if (failed > 0) process.exit(1);
   });
 
-// ── verify ────────────────────────────────────────────────────────────────────
 program
   .command('verify <agent-id> <skill-id>')
   .description('Trigger a validation run for an agent skill')
@@ -356,7 +351,6 @@ program
     }
   });
 
-// ── price ────────────────────────────────────────────────────────────────────
 const VALID_PRICING_MODELS = ['free', 'per-invocation', 'per-token', 'per-second'] as const;
 const VALID_CURRENCIES = ['USD', 'USDC', 'SOL'] as const;
 const VALID_PROTOCOLS = ['stripe', 'x402', 'none'] as const;
@@ -443,7 +437,7 @@ program
       currency,
     };
     if (opts.model !== 'free' && opts.protocol && opts.protocol !== 'none') {
-      pricing.paymentProtocol = opts.protocol;
+      pricing.protocol = opts.protocol;
     }
 
     // 8. Update skill pricing
@@ -517,7 +511,6 @@ program
     }
   });
 
-// ── conformance ───────────────────────────────────────────────────────────────
 program
   .command('conformance')
   .description('Run conformance test suite against a validator endpoint')
@@ -573,7 +566,6 @@ program
     if (failed > 0) process.exit(1);
   });
 
-// ── init ──────────────────────────────────────────────────────────────────────
 
 async function runInteractiveInit(outFile: string): Promise<void> {
   const { createInterface } = await import('node:readline/promises');
@@ -629,7 +621,7 @@ async function runInteractiveInit(outFile: string): Promise<void> {
       : 'https://your-org.example';
 
     const pricing: Record<string, unknown> = { model: pricingModel, amount: pricingAmount, currency: pricingCurrency };
-    if (paymentProtocol) pricing.paymentProtocol = paymentProtocol;
+    if (paymentProtocol) pricing.protocol = paymentProtocol;
 
     const skeleton = {
       specVersion: '1.0.0',
@@ -731,7 +723,6 @@ program
     console.log(pc.dim('\n  Tip: run pactspec init -i for interactive setup with pricing'));
   });
 
-// ── test ──────────────────────────────────────────────────────────────────────
 program
   .command('test <file>')
   .description('Run a skill\'s test suite locally against the agent endpoint')
@@ -882,7 +873,6 @@ program
     if (failed > 0) process.exit(1);
   });
 
-// ── convert ───────────────────────────────────────────────────────────────────
 program
   .command('convert <format> <file>')
   .description('Convert an OpenAPI or MCP document to PactSpec (formats: openapi, mcp)')
@@ -927,7 +917,6 @@ program
     }
   });
 
-// ── from-mcp ──────────────────────────────────────────────────────────────────
 program
   .command('from-mcp <url>')
   .description('Fetch tools/list from a live MCP server and generate a PactSpec file')
@@ -1129,7 +1118,6 @@ program
     }
   });
 
-// ── from-openclaw ─────────────────────────────────────────────────────────────
 program
   .command('from-openclaw <path-or-url>')
   .description('Convert an OpenClaw SKILL.md file into a PactSpec spec')
@@ -1149,7 +1137,6 @@ program
   }) => {
     let rawContent: string;
 
-    // ── 1. Fetch or read the SKILL.md ──────────────────────────────────────
     const isUrl = /^https?:\/\//i.test(pathOrUrl);
     if (isUrl) {
       let fetchUrl = pathOrUrl;
@@ -1188,7 +1175,6 @@ program
       }
     }
 
-    // ── 2. Parse YAML frontmatter ──────────────────────────────────────────
     const fmMatch = rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!fmMatch) {
       console.error(pc.red('✗ No YAML frontmatter found in SKILL.md'));
@@ -1219,7 +1205,6 @@ program
 
     console.log(pc.green(`✓ Parsed SKILL.md: "${skillName}" with ${openclawTools.length} tool${openclawTools.length === 1 ? '' : 's'}`));
 
-    // ── 3. Convert OpenClaw tools to PactSpec skills ───────────────────────
     const skills = openclawTools.map((tool) => {
       const toolName = (tool.name as string | undefined) ?? 'tool';
       const toolDesc = (tool.description as string | undefined) ?? toolName;
@@ -1251,7 +1236,6 @@ program
       };
     });
 
-    // ── 4. Build the PactSpec ──────────────────────────────────────────────
     const nameSlug = slugify(skillName) || 'skill';
     const providerSlug = slugify(author).split('-')[0] || 'openclaw';
     const endpointUrl = opts.endpoint ?? 'http://localhost:3000';
@@ -1270,12 +1254,10 @@ program
       tags: [...tags, 'openclaw'],
     };
 
-    // ── 5. Write the spec ──────────────────────────────────────────────────
     const outFile = opts.out ?? `${nameSlug}.pactspec.json`;
     writeFileSync(resolve(outFile), JSON.stringify(spec, null, 2));
     console.log(pc.green(`✓ Spec written to ${outFile}`));
 
-    // ── 6. Validate against bundled schema ─────────────────────────────────
     const ajv = new Ajv({ strict: false, allErrors: true });
     addFormats(ajv);
     const validateFn = ajv.compile(bundledSchema as object);
@@ -1288,7 +1270,6 @@ program
       }
     }
 
-    // ── 7. Print warnings about manual attention needed ────────────────────
     const warnings: string[] = [];
     if (!opts.endpoint) {
       warnings.push('endpoint.url is set to http://localhost:3000 — update to your actual MCP server URL');
@@ -1301,7 +1282,6 @@ program
       for (const w of warnings) console.log(pc.yellow(`  ! ${w}`));
     }
 
-    // ── 8. Publish if requested ────────────────────────────────────────────
     if (opts.publish) {
       if (!opts.agentId) {
         console.error(pc.red('\n✗ --publish requires --agent-id'));
@@ -1345,7 +1325,6 @@ program
     }
   });
 
-// ─── OpenAPI 3.x → PactSpec converter ────────────────────────────────────────
 
 interface ConvertResult {
   spec: Record<string, unknown>;
@@ -1588,7 +1567,6 @@ function convertOpenApi(doc: Record<string, unknown>): ConvertResult {
   return { spec, warnings };
 }
 
-// ─── MCP tool manifest → PactSpec converter ──────────────────────────────────
 
 function convertMcp(doc: Record<string, unknown>): ConvertResult {
   const warnings: string[] = [];

@@ -33,18 +33,16 @@ These are PactSpec-only and must be added manually:
 | PactSpec field | Notes |
 |----------------|-------|
 | `skills[].pricing` | No OpenAPI equivalent - add via `x-pricing` extension first |
-| `skills[].sla` | No OpenAPI equivalent - add via `x-sla` extension first |
 | `skills[].testSuite` | No OpenAPI equivalent |
-| `provider.did` | Decentralized identity - no OpenAPI equivalent |
 | `attestations` | Registry-managed |
 
 ---
 
 ## Converting OpenAPI -> PactSpec
 
-### Automated (planned CLI command)
+### Automated
 ```bash
-pactspec init --from-openapi openapi.yaml --out pactspec.json
+pactspec convert openapi openapi.yaml --out pactspec.json
 ```
 
 ### Manual mapping rules
@@ -127,10 +125,6 @@ x-pactspec-pricing:
   amount: 0.02
   currency: USD
   protocol: stripe
-
-x-pactspec-sla:
-  p99LatencyMs: 5000
-  uptimeSLA: 0.999
 
 x-pactspec-test-suite:
   url: https://acme.ai/tests/extract-line-items.json

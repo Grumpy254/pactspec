@@ -6,10 +6,6 @@ import type {
 
 const STRIPE_API = 'https://api.stripe.com/v1';
 
-// ---------------------------------------------------------------------------
-// Create a Stripe Checkout Session
-// ---------------------------------------------------------------------------
-
 /**
  * Creates a Stripe Checkout session and returns the hosted checkout URL.
  *
@@ -77,10 +73,6 @@ export async function createCheckoutSession(
     sessionId: session.id,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Verify a Checkout Session
-// ---------------------------------------------------------------------------
 
 /**
  * Checks whether a Checkout Session has been paid.

@@ -1,7 +1,3 @@
-// ---------------------------------------------------------------------------
-// Stripe Billing types for PactSpec
-// ---------------------------------------------------------------------------
-
 /** Pricing model aligned with PactSpec AgentSpecPricing */
 export interface BillingPricing {
   model: 'per-invocation' | 'per-token' | 'per-second';
@@ -11,7 +7,6 @@ export interface BillingPricing {
   currency: string;
 }
 
-/** A single usage record reported to Stripe */
 export interface UsageRecord {
   customerId: string;
   subscriptionItemId: string;
@@ -20,7 +15,6 @@ export interface UsageRecord {
   action: 'increment' | 'set';
 }
 
-/** In-memory tracker for per-customer usage against a free quota */
 export interface CustomerUsage {
   customerId: string;
   totalInvocations: number;
@@ -28,21 +22,14 @@ export interface CustomerUsage {
   lastReportedAt: number | null;
 }
 
-// ---------------------------------------------------------------------------
-// Middleware
-// ---------------------------------------------------------------------------
-
 export interface StripeBillingOptions {
-  /** Stripe secret key (sk_live_... or sk_test_...) */
   stripeSecretKey: string;
-  /** Pricing configuration for the protected endpoint */
   pricing: BillingPricing;
   /**
    * Extract the Stripe customer ID from the incoming request.
    * Return `null` if the customer cannot be identified.
    */
   lookupCustomer: (req: any) => Promise<string | null>;
-  /** Callback fired after a usage record is reported to Stripe */
   onUsageReported?: (record: UsageRecord) => void;
   /**
    * Number of free invocations before billing starts (per customer).
@@ -59,27 +46,17 @@ export interface StripeBillingOptions {
    * `{CHECKOUT_SESSION_ID}` is replaced with the real session ID.
    */
   checkoutSuccessUrl?: string;
-  /** URL to redirect to if the customer cancels Checkout */
   checkoutCancelUrl?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Checkout
-// ---------------------------------------------------------------------------
-
 export interface CheckoutOptions {
   stripeSecretKey: string;
-  /** Stripe Price ID to charge */
   priceId: string;
-  /** Pre-existing Stripe customer ID (optional — Stripe creates one if omitted) */
   customerId?: string;
-  /** Where to redirect after successful payment */
   successUrl: string;
-  /** Where to redirect if the user cancels */
   cancelUrl: string;
   /** Checkout mode: 'payment' for one-time, 'subscription' for recurring */
   mode?: 'payment' | 'subscription';
-  /** Arbitrary key-value metadata attached to the Checkout Session */
   metadata?: Record<string, string>;
 }
 
@@ -88,15 +65,9 @@ export interface CheckoutSessionResult {
   sessionId: string;
 }
 
-// ---------------------------------------------------------------------------
-// Usage reporting
-// ---------------------------------------------------------------------------
-
 export interface UsageReportOptions {
   stripeSecretKey: string;
-  /** The subscription item ID to report usage against */
   subscriptionItemId: string;
-  /** Number of units to report */
   quantity: number;
   /** Unix timestamp for the usage event (defaults to now) */
   timestamp?: number;
@@ -106,9 +77,7 @@ export interface UsageReportOptions {
 
 export interface UsageSummaryOptions {
   stripeSecretKey: string;
-  /** Only return usage after this Unix timestamp */
   startTime?: number;
-  /** Only return usage before this Unix timestamp */
   endTime?: number;
 }
 
@@ -122,10 +91,6 @@ export interface UsageSummary {
   customerId: string;
   items: UsageSummaryItem[];
 }
-
-// ---------------------------------------------------------------------------
-// Stripe API helpers (internal, but exported for advanced use)
-// ---------------------------------------------------------------------------
 
 export interface StripeSubscription {
   id: string;

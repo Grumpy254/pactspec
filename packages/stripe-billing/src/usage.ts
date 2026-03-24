@@ -7,10 +7,6 @@ import type {
 
 const STRIPE_API = 'https://api.stripe.com/v1';
 
-// ---------------------------------------------------------------------------
-// Report usage for a metered subscription item
-// ---------------------------------------------------------------------------
-
 /**
  * Reports usage to Stripe for metered billing.
  *
@@ -58,19 +54,9 @@ export async function reportUsage(options: UsageReportOptions): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Get usage summary for a customer
-// ---------------------------------------------------------------------------
-
 /**
  * Retrieves a usage summary for all metered subscription items belonging to
  * a customer.
- *
- * ```ts
- * const summary = await getUsageSummary('cus_abc123', {
- *   stripeSecretKey: process.env.STRIPE_SECRET_KEY!,
- * });
- * ```
  */
 export async function getUsageSummary(
   customerId: string,
@@ -78,7 +64,6 @@ export async function getUsageSummary(
 ): Promise<UsageSummary> {
   const { stripeSecretKey, startTime, endTime } = options;
 
-  // Step 1: list customer's subscriptions
   const subsParams = new URLSearchParams();
   subsParams.set('customer', customerId);
   subsParams.set('status', 'active');
@@ -104,7 +89,6 @@ export async function getUsageSummary(
     data: Array<{ items: { data: Array<{ id: string }> } }>;
   };
 
-  // Step 2: for each subscription item, fetch usage record summaries
   const items: UsageSummaryItem[] = [];
 
   for (const sub of subsData.data) {

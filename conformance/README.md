@@ -15,11 +15,11 @@ conformance/
 ## Running against your validator
 
 ```bash
-# Using the PactSpec CLI (planned)
-pactspec conformance --validator https://your-validator/api/validate
+# Using the PactSpec CLI
+pactspec conformance
 
-# Using the hosted registry validator (planned)
-pactspec conformance --validator https://pactspec.dev/api/spec/validate
+# Against a custom registry
+pactspec conformance --registry https://your-registry.example
 ```
 
 Exit code 0 = all tests passed. Exit code 1 = one or more failures.

@@ -4,10 +4,6 @@
 
 import type { PactSpecRegisterOptions, SkillConfig, PublishResult } from './types.js';
 
-// ---------------------------------------------------------------------------
-// Spec builder
-// ---------------------------------------------------------------------------
-
 /**
  * Build a complete PactSpec JSON document from the register options and a
  * resolved base URL.
@@ -69,10 +65,6 @@ export function buildSpec(
   return spec;
 }
 
-// ---------------------------------------------------------------------------
-// Publisher
-// ---------------------------------------------------------------------------
-
 /**
  * POST the spec to the registry.
  */
@@ -90,7 +82,6 @@ export async function publishToRegistry(
     headers['X-Publish-Token'] = opts.publishToken;
   }
 
-  // Use the global fetch (Node 18+). No runtime dependencies needed.
   const res = await fetch(url, {
     method: 'POST',
     headers,
@@ -112,15 +103,11 @@ export async function publishToRegistry(
   return { success: true, agentUrl };
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 /**
  * Derive a URL-safe agent ID from the provider name and agent name.
  * Example: "Acme Corp" + "Invoice Processing Agent" => "acme-corp:invoice-processing-agent"
  */
-function deriveAgentId(providerName: string, agentName: string): string {
+export function deriveAgentId(providerName: string, agentName: string): string {
   const slug = (s: string) =>
     s
       .toLowerCase()
@@ -129,9 +116,6 @@ function deriveAgentId(providerName: string, agentName: string): string {
   return `${slug(providerName)}:${slug(agentName)}`;
 }
 
-/**
- * Generate a description from the skills list when none is provided.
- */
 function autoDescription(name: string, skills: SkillConfig[]): string {
   if (skills.length === 1) {
     return `${name} — ${skills[0].description}`;

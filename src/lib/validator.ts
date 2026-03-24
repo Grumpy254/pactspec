@@ -16,7 +16,6 @@ import type { AuthType } from '@/types/agent-spec';
 const ajv = new Ajv({ strict: false });
 addFormats(ajv);
 
-// ── SSRF protection ──────────────────────────────────────────────────────────
 const BLOCKED_HOSTS = new Set([
   'localhost',
   '0.0.0.0',
@@ -149,7 +148,6 @@ export async function assertSafeUrl(rawUrl: string, label: string): Promise<void
     throw new Error(`${label} resolves to a private or reserved address`);
   }
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 // Resolve hostname to a safe IP once, then pin the TCP connection to that IP
 // via undici's custom lookup — keeping the original hostname in the URL so

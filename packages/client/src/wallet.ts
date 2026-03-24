@@ -1,18 +1,8 @@
-// ---------------------------------------------------------------------------
-// Wallet adapter interface
-// ---------------------------------------------------------------------------
-
-/** Parameters for a single payment request. */
 export interface PaymentRequest {
-  /** Amount in the currency's smallest unit. */
   amount: string;
-  /** Currency code (e.g. "USDC", "SOL"). */
   currency: string;
-  /** Blockchain network identifier (e.g. "base", "solana-mainnet"). */
   network: string;
-  /** Recipient wallet address. */
   payTo: string;
-  /** Unique identifier for this payment (used for dedup on the server). */
   paymentId: string;
 }
 
@@ -29,10 +19,6 @@ export interface WalletAdapter {
   /** Return the wallet's public address. */
   getAddress(): Promise<string>;
 }
-
-// ---------------------------------------------------------------------------
-// Mock wallet (for testing / development)
-// ---------------------------------------------------------------------------
 
 /**
  * A mock wallet that returns fake transaction hashes. Useful for local

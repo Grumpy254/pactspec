@@ -15,15 +15,9 @@ import {
   SkillNotFoundError,
 } from './errors.js';
 
-// ---------------------------------------------------------------------------
-// Options
-// ---------------------------------------------------------------------------
-
 export interface ClientOptions {
   /** Registry base URL. Defaults to https://pactspec.dev */
   registry?: string;
-
-  // -- Payment options (provide one or both) --------------------------------
 
   /** Wallet adapter for x402 on-chain payments. */
   wallet?: WalletAdapter;
@@ -31,8 +25,6 @@ export interface ClientOptions {
   stripeCustomerId?: string;
   /** Async resolver that returns a Stripe checkout session ID. */
   stripeSessionResolver?: () => Promise<string>;
-
-  // -- Limits ---------------------------------------------------------------
 
   /**
    * Maximum amount (in the currency's smallest unit) that the client is
@@ -51,10 +43,6 @@ export interface ClientOptions {
   autoPayEnabled?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Client
-// ---------------------------------------------------------------------------
-
 const DEFAULT_REGISTRY = 'https://pactspec.dev';
 
 export class PactSpecClient {
@@ -66,7 +54,6 @@ export class PactSpecClient {
   private readonly maxPaymentCurrency?: string;
   private readonly autoPayEnabled: boolean;
 
-  /** In-memory cache: specId -> Agent */
   private readonly specCache = new Map<string, Agent>();
 
   constructor(options: ClientOptions = {}) {
@@ -78,10 +65,6 @@ export class PactSpecClient {
     this.maxPaymentCurrency = options.maxPaymentCurrency;
     this.autoPayEnabled = options.autoPayEnabled ?? true;
   }
-
-  // -----------------------------------------------------------------------
-  // Discovery
-  // -----------------------------------------------------------------------
 
   /** Look up an agent spec by its ID from the registry. */
   async getAgent(specId: string): Promise<Agent> {
@@ -116,10 +99,6 @@ export class PactSpecClient {
     return (await res.json()) as SearchResult;
   }
 
-  // -----------------------------------------------------------------------
-  // Invocation
-  // -----------------------------------------------------------------------
-
   /**
    * Invoke an agent skill. If the agent returns 402 and auto-pay is enabled,
    * the client will automatically handle the payment and retry.
@@ -145,10 +124,6 @@ export class PactSpecClient {
     this.specCache.clear();
   }
 
-  // -----------------------------------------------------------------------
-  // Internal
-  // -----------------------------------------------------------------------
-
   private async invokeInternal(
     specId: string,
     skillId: string,
@@ -161,7 +136,6 @@ export class PactSpecClient {
 
     const endpointUrl = this.buildSkillUrl(agent, skill.id);
 
-    // --- First attempt -----------------------------------------------------
     const firstResponse = await this.postToAgent(endpointUrl, input, agent);
 
     if (firstResponse.status === 200 || (firstResponse.status >= 200 && firstResponse.status < 300)) {
@@ -181,20 +155,16 @@ export class PactSpecClient {
       );
     }
 
-    // --- 402 Payment Required ----------------------------------------------
     const challenge = await this.parseChallenge(firstResponse);
 
     if (!autoPay || !this.autoPayEnabled) {
       throw new PaymentRequiredError(challenge);
     }
 
-    // Budget check
     this.enforceBudget(challenge);
 
-    // Execute payment
     const paymentHeaders = await this.executePayment(challenge);
 
-    // --- Retry with payment proof ------------------------------------------
     const retryResponse = await this.postToAgent(endpointUrl, input, agent, paymentHeaders);
 
     if (retryResponse.status >= 200 && retryResponse.status < 300) {
@@ -216,10 +186,6 @@ export class PactSpecClient {
     );
   }
 
-  // -----------------------------------------------------------------------
-  // HTTP helpers
-  // -----------------------------------------------------------------------
-
   private buildSkillUrl(agent: Agent, skillId: string): string {
     const base = agent.endpoint.url.replace(/\/+$/, '');
     return `${base}/${encodeURIComponent(skillId)}`;
@@ -237,7 +203,6 @@ export class PactSpecClient {
       ...extraHeaders,
     };
 
-    // Add auth header if the spec declares one
     if (agent.endpoint.auth?.type === 'x-agent-id') {
       headers['X-Agent-Id'] = agent.id;
     }
@@ -248,10 +213,6 @@ export class PactSpecClient {
       body: JSON.stringify(input),
     });
   }
-
-  // -----------------------------------------------------------------------
-  // Payment handling
-  // -----------------------------------------------------------------------
 
   private async parseChallenge(response: Response): Promise<PaymentChallenge> {
     const body = await response.json() as Record<string, unknown>;
@@ -283,7 +244,6 @@ export class PactSpecClient {
   private async executePayment(
     challenge: PaymentChallenge,
   ): Promise<Record<string, string>> {
-    // x402 on-chain payment
     if (challenge.network && challenge.payTo) {
       if (!this.wallet) {
         throw new PaymentFailedError(
@@ -300,7 +260,6 @@ export class PactSpecClient {
           paymentId: challenge.paymentId,
         });
 
-        // Return the proof as a JSON-encoded header value
         const proof = JSON.stringify({
           txHash,
           paymentId: challenge.paymentId,
@@ -312,7 +271,6 @@ export class PactSpecClient {
       }
     }
 
-    // Stripe payment
     if (challenge.checkoutUrl || this.stripeCustomerId) {
       if (this.stripeCustomerId) {
         return { 'X-Stripe-Customer': this.stripeCustomerId };
@@ -336,10 +294,6 @@ export class PactSpecClient {
       `Unsupported payment challenge type: ${challenge.type}`,
     );
   }
-
-  // -----------------------------------------------------------------------
-  // Response parsing
-  // -----------------------------------------------------------------------
 
   private async parseResponseBody(response: Response): Promise<unknown> {
     const contentType = response.headers.get('content-type') ?? '';

@@ -14,19 +14,11 @@ import type {
   MinimalResponse,
   NextFunction,
 } from './types.js';
-import { buildSpec, publishToRegistry } from './register.js';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+import { buildSpec, publishToRegistry, deriveAgentId } from './register.js';
 
 const WELL_KNOWN_PATH = '/.well-known/pactspec.json';
 const STARTUP_DELAY_MS = 2_000;
 const LOG_PREFIX = 'PactSpec:';
-
-// ---------------------------------------------------------------------------
-// Middleware factory
-// ---------------------------------------------------------------------------
 
 /**
  * Create Express middleware that auto-publishes the agent spec to the PactSpec
@@ -35,7 +27,6 @@ const LOG_PREFIX = 'PactSpec:';
 export function pactspec(
   options: PactSpecRegisterOptions,
 ): (req: MinimalRequest, res: MinimalResponse, next: NextFunction) => void {
-  // ── Resolve config with defaults ────────────────────────────────────────
   const registry =
     options.registry ??
     process.env.PACTSPEC_REGISTRY ??
@@ -52,14 +43,11 @@ export function pactspec(
   const agentId =
     options.agentId ?? deriveAgentId(providerName, options.name);
 
-  // ── State ───────────────────────────────────────────────────────────────
   let resolvedBaseUrl: string | null = options.baseUrl ?? null;
   let cachedSpec: Record<string, unknown> | null = null;
   let published = false;
   let publishScheduled = false;
   let republishTimer: ReturnType<typeof setInterval> | null = null;
-
-  // ── Helpers ─────────────────────────────────────────────────────────────
 
   function getSpec(): Record<string, unknown> {
     if (!cachedSpec && resolvedBaseUrl) {
@@ -98,45 +86,37 @@ export function pactspec(
     if (publishScheduled) return;
     publishScheduled = true;
 
-    // Wait a short period for the server to fully start, then publish.
     setTimeout(() => {
       doPublish().then(() => {
-        // Set up periodic re-publish if configured.
         if (republishInterval > 0 && !republishTimer) {
           republishTimer = setInterval(() => {
             invalidateCache();
             doPublish();
           }, republishInterval);
-          // Don't prevent process exit.
           if (republishTimer.unref) republishTimer.unref();
         }
       });
     }, STARTUP_DELAY_MS);
   }
 
-  // ── Attempt early publish if baseUrl is already known ───────────────────
   if (resolvedBaseUrl && publishOnStart && autoPublish) {
     scheduleStartupPublish();
   }
 
-  // ── The middleware function ─────────────────────────────────────────────
   return function pactspecMiddleware(
     req: MinimalRequest,
     res: MinimalResponse,
     next: NextFunction,
   ): void {
-    // 1. Detect baseUrl from the first incoming request if not configured.
     if (!resolvedBaseUrl) {
       resolvedBaseUrl = detectBaseUrl(req);
       invalidateCache();
 
-      // Now that we have a baseUrl, kick off the startup publish.
       if (publishOnStart && autoPublish) {
         scheduleStartupPublish();
       }
     }
 
-    // 2. Serve /.well-known/pactspec.json
     const reqPath = req.path ?? req.url?.split('?')[0];
     if (
       reqPath === WELL_KNOWN_PATH &&
@@ -145,7 +125,6 @@ export function pactspec(
       const spec = getSpec();
       const body = JSON.stringify(spec, null, 2);
 
-      // Prefer the Express-style API when available.
       if (res.status && res.json) {
         res.status(200).json!(spec);
       } else {
@@ -155,17 +134,11 @@ export function pactspec(
       return;
     }
 
-    // 3. Pass everything else through.
     next();
   };
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
 function detectBaseUrl(req: MinimalRequest): string {
-  // Try Express helpers first.
   if (typeof req.get === 'function') {
     const host = req.get('host');
     if (host) {
@@ -174,7 +147,6 @@ function detectBaseUrl(req: MinimalRequest): string {
     }
   }
 
-  // Fallback: raw headers.
   const host =
     (req.headers?.['x-forwarded-host'] as string) ??
     (req.headers?.['host'] as string);
@@ -184,16 +156,6 @@ function detectBaseUrl(req: MinimalRequest): string {
     return `${proto}://${host}`;
   }
 
-  // Last resort: environment.
   const port = process.env.PORT ?? '3000';
   return `http://localhost:${port}`;
-}
-
-function deriveAgentId(providerName: string, agentName: string): string {
-  const slug = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-  return `${slug(providerName)}:${slug(agentName)}`;
 }

@@ -1,50 +1,22 @@
-// ---------------------------------------------------------------------------
-// Invocation result
-// ---------------------------------------------------------------------------
-
-/** Result returned from an agent skill invocation. */
 export interface InvokeResult {
-  /** The response data from the agent. */
   data: unknown;
-  /** HTTP status code of the final (successful) response. */
   status: number;
-  /** Whether a payment was made to fulfill this request. */
   paid: boolean;
-  /** Unique payment identifier, present when `paid` is true. */
   paymentId?: string;
-  /** Amount paid in the currency's smallest unit. */
   paymentAmount?: string;
-  /** Currency of the payment (e.g. "USDC", "USD"). */
   paymentCurrency?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Payment challenge (parsed from a 402 response)
-// ---------------------------------------------------------------------------
-
-/** Describes the payment required by the agent. */
 export interface PaymentChallenge {
-  /** Payment type identifier (e.g. "x402", "stripe"). */
   type: string;
-  /** Amount in the currency's smallest unit. */
   amount: string;
-  /** Currency code. */
   currency: string;
-  /** Blockchain network (present for x402 payments). */
   network?: string;
-  /** Wallet address to pay (present for x402 payments). */
   payTo?: string;
-  /** Unique identifier for this payment request. */
   paymentId: string;
-  /** ISO-8601 expiry timestamp. */
   expiresAt?: string;
-  /** Stripe checkout URL (present for Stripe payments). */
   checkoutUrl?: string;
 }
-
-// ---------------------------------------------------------------------------
-// Agent types (subset used by the client)
-// ---------------------------------------------------------------------------
 
 export interface AgentPricing {
   model: string;
@@ -88,10 +60,6 @@ export interface Agent {
   skills: AgentSkill[];
   tags?: string[];
 }
-
-// ---------------------------------------------------------------------------
-// Search
-// ---------------------------------------------------------------------------
 
 export interface SearchOptions {
   query?: string;

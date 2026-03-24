@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "skill": "paid-summarize",
+  "tests": [
+    {
+      "id": "no-payment-returns-402",
+      "description": "A POST without X-Payment-Proof should return 402 with a payment challenge",
+      "request": {
+        "method": "POST",
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "text": "The James Webb Space Telescope is a space telescope designed to conduct infrared astronomy.",
+          "maxSentences": 2
+        }
+      },
+      "expect": {
+        "status": 402,
+        "outputSchema": {
+          "type": "object",
+          "required": ["amount", "currency", "paymentId"],
+          "properties": {
+            "amount": { "type": "string" },
+            "currency": { "type": "string" },
+            "network": { "type": "string" },
+            "payTo": { "type": "string" },
+            "paymentId": { "type": "string" },
+            "expiresAt": { "type": "string" }
+          }
+        }
+      }
+    }
+  ]
+}

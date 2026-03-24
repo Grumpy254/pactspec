@@ -22,7 +22,7 @@
  */
 
 export { pactspec } from './middleware.js';
-export { buildSpec, publishToRegistry } from './register.js';
+export { buildSpec, publishToRegistry, deriveAgentId } from './register.js';
 export type {
   PactSpecRegisterOptions,
   SkillConfig,

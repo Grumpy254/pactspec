@@ -32,7 +32,6 @@ and verifiable - without changing any of its MCP implementation.
 | *(none)* | `skills[].outputSchema` | MCP doesn't define output schema |
 | Server transport URL | `endpoint.url` | The HTTP/SSE endpoint |
 | *(none)* | `skills[].pricing` | PactSpec-only |
-| *(none)* | `skills[].sla` | PactSpec-only |
 | *(none)* | `skills[].testSuite` | PactSpec-only |
 
 ---
@@ -106,13 +105,13 @@ MCP server with two tools (`read_file`, `write_file`):
 
 ## Converting MCP tool list -> PactSpec
 
-### Using the CLI (planned)
+### Using the CLI
 ```bash
-pactspec init --from-mcp https://mcp.acme.ai --out pactspec.json
+pactspec from-mcp https://mcp.acme.ai --out pactspec.json
 ```
 
-The CLI will call the MCP `tools/list` endpoint and generate a skeleton PactSpec.
-You then fill in `pricing`, `sla`, and `testSuite` manually.
+The CLI calls the MCP `tools/list` endpoint and generates a skeleton PactSpec.
+You then fill in `pricing` and `testSuite` manually.
 
 ### Manual rules
 

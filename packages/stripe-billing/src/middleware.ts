@@ -8,9 +8,6 @@ import { createCheckoutSession } from './checkout';
 
 const STRIPE_API = 'https://api.stripe.com/v1';
 
-// ---------------------------------------------------------------------------
-// In-memory usage tracking (per-process, not persistent)
-// ---------------------------------------------------------------------------
 const usageStore = new Map<string, CustomerUsage>();
 
 function getOrCreateUsage(customerId: string): CustomerUsage {
@@ -36,10 +33,6 @@ export function getCustomerUsage(customerId: string): CustomerUsage | null {
 export function resetUsageStore(): void {
   usageStore.clear();
 }
-
-// ---------------------------------------------------------------------------
-// Stripe helpers
-// ---------------------------------------------------------------------------
 
 async function getActiveSubscription(
   customerId: string,
@@ -118,10 +111,6 @@ async function reportStripeUsage(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Middleware
-// ---------------------------------------------------------------------------
-
 /**
  * Express-compatible middleware that gates requests behind Stripe billing.
  *
@@ -130,21 +119,8 @@ async function reportStripeUsage(
  *   2. `Authorization: Bearer <checkout_session_id>` header
  *   3. The `lookupCustomer` callback
  *
- * If the customer has an active subscription and is within quota, the
- * request proceeds. After the response finishes, usage is reported to
- * Stripe for metered billing.
- *
  * When no valid payment method is found, the middleware returns **402** with
  * a JSON body containing a Stripe Checkout URL.
- *
- * ```ts
- * app.use('/api/agent', stripeBillingMiddleware({
- *   stripeSecretKey: process.env.STRIPE_SECRET_KEY!,
- *   pricing: { model: 'per-invocation', amount: 1, currency: 'usd' },
- *   lookupCustomer: async (req) => req.headers['x-customer-id'] ?? null,
- *   freeQuota: 100,
- * }));
- * ```
  */
 export function stripeBillingMiddleware(
   options: StripeBillingOptions,
@@ -162,19 +138,14 @@ export function stripeBillingMiddleware(
 
   return async (req: any, res: any, next: any) => {
     try {
-      // ---------------------------------------------------------------
-      // 1. Identify the Stripe customer
-      // ---------------------------------------------------------------
       let customerId: string | null = null;
 
-      // Check X-Stripe-Customer header
       const headerCustomer =
         req.headers?.['x-stripe-customer'] as string | undefined;
       if (headerCustomer) {
         customerId = headerCustomer;
       }
 
-      // Check Authorization: Bearer <session_id> (Checkout session)
       if (!customerId) {
         const authHeader = req.headers?.['authorization'] as string | undefined;
         if (authHeader?.startsWith('Bearer cs_')) {
@@ -186,7 +157,6 @@ export function stripeBillingMiddleware(
         }
       }
 
-      // Fallback to user-provided lookup
       if (!customerId) {
         customerId = await lookupCustomer(req);
       }
@@ -195,20 +165,13 @@ export function stripeBillingMiddleware(
         return send402(res, stripePriceId, stripeSecretKey, checkoutSuccessUrl, checkoutCancelUrl);
       }
 
-      // ---------------------------------------------------------------
-      // 2. Check free quota
-      // ---------------------------------------------------------------
       const usage = getOrCreateUsage(customerId);
 
       if (freeQuota > 0 && usage.totalInvocations < freeQuota) {
-        // Still within free tier — let the request through
         usage.totalInvocations++;
         return next();
       }
 
-      // ---------------------------------------------------------------
-      // 3. Verify active subscription
-      // ---------------------------------------------------------------
       const subscription = await getActiveSubscription(
         customerId,
         stripeSecretKey,
@@ -220,13 +183,9 @@ export function stripeBillingMiddleware(
 
       const subscriptionItemId = subscription.items.data[0]?.id;
 
-      // ---------------------------------------------------------------
-      // 4. Allow request, then report usage after response
-      // ---------------------------------------------------------------
       usage.totalInvocations++;
       usage.billableInvocations++;
 
-      // Hook into response finish to report usage
       res.on('finish', async () => {
         if (!subscriptionItemId) return;
 
@@ -247,16 +206,11 @@ export function stripeBillingMiddleware(
 
       next();
     } catch (err: any) {
-      // Don't block requests on billing errors — log and continue
       console.error('[pactspec/stripe-billing] middleware error:', err?.message);
       next();
     }
   };
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function computeQuantity(
   model: string,
@@ -265,13 +219,11 @@ function computeQuantity(
 ): number {
   switch (model) {
     case 'per-token': {
-      // Look for token count in response header or body metadata
       const tokenHeader = res.getHeader?.('x-token-count');
       if (tokenHeader) return Number(tokenHeader) || 1;
       return 1;
     }
     case 'per-second': {
-      // Use request duration if tracked
       const startTime = req._stripeBillingStart as number | undefined;
       if (startTime) {
         return Math.max(1, Math.ceil((Date.now() - startTime) / 1000));
@@ -297,7 +249,6 @@ async function send402(
       'A valid Stripe subscription or checkout session is required to access this agent.',
   };
 
-  // If we have a price ID, generate a checkout URL on the fly
   if (stripePriceId) {
     try {
       const { url, sessionId } = await createCheckoutSession({

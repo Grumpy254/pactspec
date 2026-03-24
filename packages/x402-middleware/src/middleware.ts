@@ -16,17 +16,11 @@ import type {
 } from './types.js';
 import { createMockVerifier } from './verify.js';
 
-// ---------------------------------------------------------------------------
-// TTL Map — simple in-memory cache with automatic expiry
-// ---------------------------------------------------------------------------
-
 class TtlMap<V> {
   private map = new Map<string, { value: V; expiresAt: number }>();
   private sweepInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(private readonly sweepEveryMs = 60_000) {
-    // Periodic sweep to avoid unbounded growth. unref() so the timer
-    // does not prevent the process from exiting.
     this.sweepInterval = setInterval(() => this.sweep(), this.sweepEveryMs);
     if (this.sweepInterval.unref) this.sweepInterval.unref();
   }
@@ -70,10 +64,6 @@ class TtlMap<V> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function getHeader(
   headers: Record<string, string | string[] | undefined> | undefined,
   name: string,
@@ -95,7 +85,6 @@ function parsePaymentProof(raw: string): PaymentProof | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // Try JSON first
   if (trimmed.startsWith('{')) {
     try {
       const parsed = JSON.parse(trimmed);
@@ -110,13 +99,8 @@ function parsePaymentProof(raw: string): PaymentProof | null {
     }
   }
 
-  // Plain transaction hash (no paymentId — we'll try to match it later)
   return { txHash: trimmed, paymentId: '' };
 }
-
-// ---------------------------------------------------------------------------
-// Middleware factory
-// ---------------------------------------------------------------------------
 
 /**
  * Creates an x402 payment middleware.
@@ -153,39 +137,26 @@ export function x402Middleware(options: X402Options): X402MiddlewareFunction {
     deduplicationTtlMs = 3_600_000, // 1 hour
   } = options;
 
-  // Active challenges keyed by paymentId
   const challenges = new TtlMap<PaymentChallenge>();
-
-  // Already-verified payment IDs (deduplication)
   const verified = new TtlMap<true>();
 
   return function x402(req, res, next) {
-    // -----------------------------------------------------------------------
-    // 1. Always skip CORS preflight
-    // -----------------------------------------------------------------------
     if (req.method === 'OPTIONS') {
       next();
       return;
     }
 
-    // -----------------------------------------------------------------------
-    // 2. Custom skip predicate
-    // -----------------------------------------------------------------------
     if (skipIf && skipIf(req)) {
       next();
       return;
     }
 
-    // -----------------------------------------------------------------------
-    // 3. Check for X-Payment-Proof header
-    // -----------------------------------------------------------------------
     const proofHeader = getHeader(
       req.headers as Record<string, string | string[] | undefined>,
       'x-payment-proof',
     );
 
     if (!proofHeader) {
-      // No proof — issue a 402 challenge
       const paymentId = randomUUID();
       const expiresAt = new Date(Date.now() + challengeTtlMs).toISOString();
 
@@ -209,9 +180,6 @@ export function x402Middleware(options: X402Options): X402MiddlewareFunction {
       return;
     }
 
-    // -----------------------------------------------------------------------
-    // 4. Parse the proof
-    // -----------------------------------------------------------------------
     const proof = parsePaymentProof(proofHeader);
 
     if (!proof) {
@@ -220,11 +188,7 @@ export function x402Middleware(options: X402Options): X402MiddlewareFunction {
       return;
     }
 
-    // -----------------------------------------------------------------------
-    // 5. Deduplication — already verified this payment?
-    // -----------------------------------------------------------------------
     if (proof.paymentId && verified.has(proof.paymentId)) {
-      // Payment already used
       res.writeHead(409, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({ error: 'Payment already consumed', paymentId: proof.paymentId }),
@@ -232,9 +196,6 @@ export function x402Middleware(options: X402Options): X402MiddlewareFunction {
       return;
     }
 
-    // -----------------------------------------------------------------------
-    // 6. Build expectation and verify
-    // -----------------------------------------------------------------------
     const expectation: PaymentExpectation = {
       amount: pricing.amount,
       currency: pricing.currency,
@@ -243,7 +204,6 @@ export function x402Middleware(options: X402Options): X402MiddlewareFunction {
       paymentId: proof.paymentId,
     };
 
-    // If a paymentId was provided, check it matches an active challenge
     if (proof.paymentId) {
       const challenge = challenges.get(proof.paymentId);
       if (!challenge) {
@@ -266,13 +226,11 @@ export function x402Middleware(options: X402Options): X402MiddlewareFunction {
           return;
         }
 
-        // Mark as verified for deduplication
         if (proof.paymentId) {
           verified.set(proof.paymentId, true, deduplicationTtlMs);
           challenges.delete(proof.paymentId);
         }
 
-        // Emit payment record
         if (onPaymentReceived) {
           const record: PaymentRecord = {
             paymentId: proof.paymentId,
@@ -290,7 +248,6 @@ export function x402Middleware(options: X402Options): X402MiddlewareFunction {
           }
         }
 
-        // Payment verified — pass through to the handler
         next();
       })
       .catch((err) => {

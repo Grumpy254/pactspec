@@ -53,5 +53,6 @@ pactspec-py/__pycache__/
 cli/test-source.*
 .local-*
 supabase/
-.claude/commands/
+.claude/
 scripts/
+integrations/*/dist/
