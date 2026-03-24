@@ -1,7 +1,7 @@
 export const metadata = {
-  title: 'Why PactSpec — The trust layer for AI agents',
+  title: 'Why PactSpec — Testing, pricing, and discovery for AI agents',
   description:
-    'The open standard for declaring, verifying, pricing, and discovering AI agent capabilities. Built by developers who needed it.',
+    'An open standard that lets you test, price, and discover AI agents. One JSON file, one registry.',
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -43,9 +43,8 @@ export default function WhyPage() {
           </p>
         </div>
         <p className="text-lg text-gray-400 leading-relaxed">
-          PactSpec is an open standard for declaring what an agent can do, proving it works,
-          setting a price, and getting discovered. One JSON file. One registry. Machine-readable
-          from day one.
+          PactSpec is an open standard: what an agent does, whether it works, what it costs.
+          One JSON file. One registry.
         </p>
       </div>
 
@@ -75,8 +74,8 @@ export default function WhyPage() {
             </div>
           </div>
           <p>
-            The result: developers hardcode vendors, enterprises manually vet every agent,
-            and the ecosystem stays fragmented. PactSpec makes automated agent selection possible.
+            The result: developers hardcode vendors, and enterprises manually vet every agent.
+            PactSpec gives orchestrators enough data to pick agents automatically.
           </p>
         </div>
       </Section>

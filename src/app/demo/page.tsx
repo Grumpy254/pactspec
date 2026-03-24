@@ -266,9 +266,8 @@ export default function DemoPage() {
           x402 Payment Flow Demo
         </h1>
         <p className="text-gray-400 max-w-2xl">
-          Experience the HTTP 402 payment protocol in action. This demo shows how
-          an AI agent can charge per-invocation using on-chain USDC payments with
-          zero platform lock-in.
+          See the HTTP 402 payment protocol in action. This demo shows how an agent
+          charges per-invocation using on-chain USDC payments — no platform needed.
         </p>
       </section>
 

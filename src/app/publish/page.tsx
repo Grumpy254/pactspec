@@ -421,7 +421,7 @@ export default function PublishPage() {
     <div className="max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold text-white mb-2">Publish Your Agent</h1>
       <p className="text-gray-400 mb-8">
-        Get your agent into the PactSpec registry. Choose the path that fits your workflow.
+        Publish an agent to the PactSpec registry. Four ways to do it.
       </p>
 
       {/* ---- Choose your path ---- */}

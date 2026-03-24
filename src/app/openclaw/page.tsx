@@ -121,12 +121,12 @@ export default function OpenClawPage() {
           <span className="text-indigo-400">with PactSpec</span>
         </h1>
         <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-4">
-          13,700+ community skills. No way to know which ones work. Until now.
+          13,700+ community skills. No way to know which ones work.
+          PactSpec adds verification.
         </p>
         <p className="text-sm text-gray-500 max-w-2xl mx-auto leading-relaxed">
-          OpenClaw skills use informal SKILL.md metadata. PactSpec adds typed schemas,
-          test suites, benchmarks, and verified badges &mdash; turning informal skill
-          descriptions into machine-verifiable contracts.
+          OpenClaw skills use informal SKILL.md files. PactSpec adds typed schemas,
+          test suites, and benchmarks so you can actually verify they work.
         </p>
       </div>
 
@@ -197,7 +197,7 @@ export default function OpenClawPage() {
 
       {/* Code example */}
       <div className="mb-16">
-        <h2 className="text-xl font-semibold text-white mb-5 text-center">Convert in Seconds</h2>
+        <h2 className="text-xl font-semibold text-white mb-5 text-center">Example: convert and publish</h2>
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-2xl mx-auto">
           <div className="font-mono text-sm text-gray-300 space-y-3">
             <div>

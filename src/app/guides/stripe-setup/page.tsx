@@ -56,10 +56,9 @@ export default function StripeSetupGuidePage() {
           Accept Stripe payments for your agent
         </h1>
         <p className="text-lg text-gray-400 leading-relaxed">
-          A complete walkthrough for agent owners who want to charge real money
-          for API calls. By the end of this guide you will have a working
-          Express server that gates requests behind Stripe metered billing and a
-          published PactSpec spec with transparent pricing.
+          This guide walks you through charging for agent API calls with Stripe.
+          You&apos;ll end up with an Express server that gates requests behind metered
+          billing and a published PactSpec spec with pricing.
         </p>
       </div>
 

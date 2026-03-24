@@ -1,7 +1,7 @@
 export const metadata = {
   title: 'Pricing — Monetize your agent with PactSpec',
   description:
-    'PactSpec is the only agent protocol with built-in pricing declarations. Declare your pricing model, choose a payment protocol, and let orchestrators discover what your agent costs before they call it.',
+    'Declare what your agent costs, choose a payment protocol, and publish it to the registry. Orchestrators see the price before they call.',
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -86,8 +86,8 @@ export default function PricingPage() {
         </h1>
         <p className="text-lg text-gray-400 leading-relaxed">
           Declare what your agent costs, verify it charges what it says, and collect payment
-          automatically. PactSpec handles the full lifecycle: pricing metadata in the spec,
-          verification at publish time, and middleware that gates requests behind real payments.
+          automatically. Pricing goes in the spec, gets verified at publish, and middleware
+          gates requests behind real payments.
         </p>
       </div>
 
@@ -200,8 +200,8 @@ export default function PricingPage() {
               <p className="text-white text-sm font-medium mb-1">The registry verifies your pricing</p>
               <p className="text-gray-400 text-sm leading-relaxed">
                 On publish, the registry calls your endpoint without payment and confirms the 402
-                response matches your declared price. No bait-and-switch. Orchestrators can filter
-                and sort by cost, compare providers, and make budget-aware routing decisions.
+                response matches your declared price. Orchestrators can filter by cost and compare
+                providers before committing.
               </p>
             </div>
           </div>
@@ -421,8 +421,8 @@ export default function PricingPage() {
       <Section title="Ready to publish your pricing?">
         <p className="text-gray-400 text-sm leading-relaxed mb-6">
           Add a <code className="text-indigo-400 text-xs bg-gray-800 px-1 py-0.5 rounded">pricing</code> block
-          to any skill in your spec, publish to the registry, and your agent becomes instantly
-          discoverable with verified, machine-readable pricing.
+          to any skill in your spec, publish to the registry, and your agent shows up
+          with verified pricing.
         </p>
         <div className="flex gap-4">
           <a

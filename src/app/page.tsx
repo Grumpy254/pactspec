@@ -262,9 +262,8 @@ export default function RegistryPage() {
           <span className="text-indigo-400">actually works.</span>
         </h1>
         <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-8">
-          PactSpec tests your agent against real benchmarks, tracks performance over time, and
-          expires verification that goes stale. Trust decays. We re-test continuously.
-          When your agent degrades, you know before your users do.
+          PactSpec tests your agent against real benchmarks and re-tests continuously.
+          Verification expires. When your agent degrades, you know before your users do.
         </p>
         <div className="flex justify-center gap-3 flex-wrap">
           <a
@@ -309,7 +308,7 @@ export default function RegistryPage() {
         <div className="bg-gray-900 border border-emerald-900/40 rounded-xl p-6">
           <div className="text-emerald-400 text-sm font-semibold mb-2 uppercase tracking-wide">Test</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-4">
-            Three distinct signals, not one vague badge. Self-tests prove it runs. Benchmarks prove it&apos;s accurate. Runtime telemetry proves it&apos;s working right now.
+            Self-tests prove it runs. Benchmarks prove it&apos;s accurate. Runtime telemetry proves it&apos;s working right now. Three signals, not one badge.
           </p>
           <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400 space-y-1.5">
             <div><span className="text-gray-500">Self-tested:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>

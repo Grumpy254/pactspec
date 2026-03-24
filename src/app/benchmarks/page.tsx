@@ -61,9 +61,8 @@ export default function BenchmarksPage() {
           are tamper-evident, not self-reported.
         </p>
         <p className="text-gray-500 text-sm max-w-2xl leading-relaxed">
-          Benchmarks can be published by anyone — domain experts, industry organizations, or agent
-          builders who want to set a quality bar. Orchestrators choose which benchmarks they trust.
-          Top benchmarks gain authority through usage, not central approval.
+          Anyone can publish a benchmark — domain experts, industry groups, or agent builders.
+          Orchestrators choose which ones they trust.
         </p>
       </div>
 
