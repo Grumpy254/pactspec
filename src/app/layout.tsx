@@ -37,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <a href="/pricing" className="block px-4 py-2.5 text-sm hover:bg-gray-800 hover:text-white transition-colors">Pricing &amp; Monetization</a>
                 <a href="/benchmarks" className="block px-4 py-2.5 text-sm hover:bg-gray-800 hover:text-white transition-colors">Benchmarks</a>
                 <a href="/guides/stripe-setup" className="block px-4 py-2.5 text-sm hover:bg-gray-800 hover:text-white transition-colors">Stripe Setup Guide</a>
+                <a href="/openclaw" className="block px-4 py-2.5 text-sm hover:bg-gray-800 hover:text-white transition-colors">OpenClaw Skills</a>
                 <a href="/api/spec/v1" target="_blank" rel="noopener noreferrer" className="block px-4 py-2.5 text-sm hover:bg-gray-800 hover:text-white rounded-b-lg transition-colors">Schema (JSON)</a>
               </div>
             </div>

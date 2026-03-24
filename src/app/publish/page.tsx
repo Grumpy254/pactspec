@@ -80,6 +80,12 @@ function buildSpec(form: {
   endpointUrl: string;
   authType: AuthType;
   skills: SkillForm[];
+  hasMcp?: boolean;
+  mcpServerUrl?: string;
+  hasAcp?: boolean;
+  acpSessionTypes?: string[];
+  hasOpenapi?: boolean;
+  openapiSpecUrl?: string;
 }): AgentSpec {
   const tags = form.tags
     .split(',')
@@ -128,6 +134,27 @@ function buildSpec(form: {
     ...(form.description ? { description: form.description } : {}),
     ...(tags.length > 0 ? { tags } : {}),
   };
+
+  // Build interop section if any protocol is enabled
+  const interop: Record<string, unknown> = {};
+  if (form.hasMcp && form.mcpServerUrl?.trim()) {
+    interop.mcp = { serverUrl: form.mcpServerUrl.trim() };
+  }
+  if (form.hasAcp) {
+    interop.acp = {
+      supported: true,
+      ...(form.acpSessionTypes && form.acpSessionTypes.length > 0
+        ? { sessionTypes: form.acpSessionTypes }
+        : {}),
+    };
+  }
+  if (form.hasOpenapi && form.openapiSpecUrl?.trim()) {
+    interop.openapi = { specUrl: form.openapiSpecUrl.trim() };
+  }
+  if (Object.keys(interop).length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (spec as any).interop = interop;
+  }
 
   return spec;
 }
@@ -202,6 +229,14 @@ export default function PublishPage() {
   const [authType, setAuthType] = useState<AuthType>('bearer');
 
   const [skills, setSkills] = useState<SkillForm[]>([emptySkill()]);
+
+  /* Interop fields */
+  const [hasMcp, setHasMcp] = useState(false);
+  const [mcpServerUrl, setMcpServerUrl] = useState('');
+  const [hasAcp, setHasAcp] = useState(false);
+  const [acpSessionTypes, setAcpSessionTypes] = useState<string[]>([]);
+  const [hasOpenapi, setHasOpenapi] = useState(false);
+  const [openapiSpecUrl, setOpenapiSpecUrl] = useState('');
 
   /* JSON editor (for json mode) */
   const EXAMPLE_SPEC_TEXT = useMemo(
@@ -279,8 +314,14 @@ export default function PublishPage() {
         endpointUrl,
         authType,
         skills,
+        hasMcp,
+        mcpServerUrl,
+        hasAcp,
+        acpSessionTypes,
+        hasOpenapi,
+        openapiSpecUrl,
       }),
-    [name, version, description, specId, tags, providerName, providerUrl, providerContact, endpointUrl, authType, skills]
+    [name, version, description, specId, tags, providerName, providerUrl, providerContact, endpointUrl, authType, skills, hasMcp, mcpServerUrl, hasAcp, acpSessionTypes, hasOpenapi, openapiSpecUrl]
   );
 
   const formSpecText = useMemo(() => JSON.stringify(formSpec, null, 2), [formSpec]);
@@ -617,6 +658,105 @@ pactspec publish agent.json --agent-id my-org`}
                     <option value="header">Custom Header</option>
                   </select>
                 </div>
+              </div>
+            </div>
+
+            {/* ---- Interoperability ---- */}
+            <div className={sectionCls}>
+              <SectionTitle>Interoperability <span className={hintCls}>— optional protocol support</span></SectionTitle>
+              <p className="text-xs text-gray-500 -mt-2">Declare which agent-to-agent protocols this agent supports.</p>
+
+              {/* MCP */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasMcp}
+                    onChange={(e) => setHasMcp(e.target.checked)}
+                    className="rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
+                  />
+                  <span className="text-sm text-gray-300">This agent has an MCP server</span>
+                </label>
+                {hasMcp && (
+                  <div className="ml-6">
+                    <label className={labelCls}>MCP Server URL</label>
+                    <input
+                      type="text"
+                      value={mcpServerUrl}
+                      onChange={(e) => setMcpServerUrl(e.target.value)}
+                      placeholder="https://api.example.com/mcp"
+                      className={inputCls}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* ACP */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasAcp}
+                    onChange={(e) => setHasAcp(e.target.checked)}
+                    className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-300">This agent supports ACP sessions</span>
+                </label>
+                {hasAcp && (
+                  <div className="ml-6">
+                    <label className={labelCls}>
+                      Session Types <span className={hintCls}>— click to toggle</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {['coding', 'research', 'chat', 'analysis', 'automation'].map((st) => {
+                        const active = acpSessionTypes.includes(st);
+                        return (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={() =>
+                              setAcpSessionTypes((prev) =>
+                                active ? prev.filter((t) => t !== st) : [...prev, st]
+                              )
+                            }
+                            className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                              active
+                                ? 'bg-blue-900/60 border-blue-700 text-blue-300'
+                                : 'bg-gray-800 border-gray-700 text-gray-500 hover:text-gray-300'
+                            }`}
+                          >
+                            {st}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* OpenAPI */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasOpenapi}
+                    onChange={(e) => setHasOpenapi(e.target.checked)}
+                    className="rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
+                  />
+                  <span className="text-sm text-gray-300">This agent has an OpenAPI spec</span>
+                </label>
+                {hasOpenapi && (
+                  <div className="ml-6">
+                    <label className={labelCls}>OpenAPI Spec URL</label>
+                    <input
+                      type="text"
+                      value={openapiSpecUrl}
+                      onChange={(e) => setOpenapiSpecUrl(e.target.value)}
+                      placeholder="https://api.example.com/openapi.json"
+                      className={inputCls}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

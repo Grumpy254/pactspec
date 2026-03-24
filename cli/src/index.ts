@@ -1129,6 +1129,222 @@ program
     }
   });
 
+// ── from-openclaw ─────────────────────────────────────────────────────────────
+program
+  .command('from-openclaw <path-or-url>')
+  .description('Convert an OpenClaw SKILL.md file into a PactSpec spec')
+  .option('-o, --out <file>', 'Output file (default: <skill-slug>.pactspec.json)')
+  .option('--endpoint <url>', 'Set the endpoint URL (e.g., your running MCP server URL)')
+  .option('--publish', 'Publish immediately after generating')
+  .option('--agent-id <id>', 'Agent identifier for publishing')
+  .option('--publish-token <token>', 'Publish token (X-Publish-Token header)')
+  .option('--registry <url>', 'Registry URL', 'https://pactspec.dev')
+  .action(async (pathOrUrl: string, opts: {
+    out?: string;
+    endpoint?: string;
+    publish?: boolean;
+    agentId?: string;
+    publishToken?: string;
+    registry: string;
+  }) => {
+    let rawContent: string;
+
+    // ── 1. Fetch or read the SKILL.md ──────────────────────────────────────
+    const isUrl = /^https?:\/\//i.test(pathOrUrl);
+    if (isUrl) {
+      let fetchUrl = pathOrUrl;
+
+      // ClawHub URL → try to resolve to raw SKILL.md
+      if (/clawhub\.ai\/skills\//i.test(fetchUrl)) {
+        const skillSlug = fetchUrl.replace(/\/+$/, '').split('/').pop() ?? '';
+        fetchUrl = `https://raw.githubusercontent.com/openclaw/skills/main/${skillSlug}/SKILL.md`;
+        console.log(pc.dim(`Resolved ClawHub URL → ${fetchUrl}`));
+      }
+      // GitHub tree URL → raw.githubusercontent.com
+      else if (/github\.com\/.*\/tree\//.test(fetchUrl)) {
+        fetchUrl = fetchUrl
+          .replace('github.com', 'raw.githubusercontent.com')
+          .replace('/tree/', '/');
+        if (!fetchUrl.endsWith('/SKILL.md')) fetchUrl += '/SKILL.md';
+        console.log(pc.dim(`Resolved GitHub URL → ${fetchUrl}`));
+      }
+
+      console.log(pc.dim(`Fetching ${fetchUrl}...`));
+      try {
+        const res = await fetch(fetchUrl, { signal: AbortSignal.timeout(10_000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        rawContent = await res.text();
+      } catch (err) {
+        console.error(pc.red(`✗ Could not fetch SKILL.md: ${(err as Error).message}`));
+        process.exit(1);
+      }
+    } else {
+      const filePath = resolve(pathOrUrl);
+      try {
+        rawContent = readFileSync(filePath, 'utf-8');
+      } catch {
+        console.error(pc.red(`✗ Could not read file: ${pathOrUrl}`));
+        process.exit(1);
+      }
+    }
+
+    // ── 2. Parse YAML frontmatter ──────────────────────────────────────────
+    const fmMatch = rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!fmMatch) {
+      console.error(pc.red('✗ No YAML frontmatter found in SKILL.md'));
+      console.error(pc.dim('  Expected a file starting with --- YAML frontmatter ---'));
+      process.exit(1);
+    }
+
+    let frontmatter: Record<string, unknown>;
+    try {
+      frontmatter = parseYaml(fmMatch[1]) as Record<string, unknown>;
+      if (!frontmatter || typeof frontmatter !== 'object') throw new Error('Frontmatter did not parse to an object');
+    } catch (err) {
+      console.error(pc.red(`✗ Failed to parse YAML frontmatter: ${(err as Error).message}`));
+      process.exit(1);
+    }
+
+    const skillName = (frontmatter.name as string | undefined) ?? 'OpenClaw Skill';
+    const skillDescription = (frontmatter.description as string | undefined) ?? '';
+    const skillVersion = toSemver((frontmatter.version as string | undefined) ?? '1.0.0');
+    const author = (frontmatter.author as string | undefined) ?? 'openclaw-community';
+    const tags = (frontmatter.tags as string[] | undefined) ?? [];
+    const openclawTools = (frontmatter.tools as Array<Record<string, unknown>> | undefined) ?? [];
+
+    if (openclawTools.length === 0) {
+      console.error(pc.red('✗ No tools defined in SKILL.md frontmatter'));
+      process.exit(1);
+    }
+
+    console.log(pc.green(`✓ Parsed SKILL.md: "${skillName}" with ${openclawTools.length} tool${openclawTools.length === 1 ? '' : 's'}`));
+
+    // ── 3. Convert OpenClaw tools to PactSpec skills ───────────────────────
+    const skills = openclawTools.map((tool) => {
+      const toolName = (tool.name as string | undefined) ?? 'tool';
+      const toolDesc = (tool.description as string | undefined) ?? toolName;
+      const params = (tool.parameters as Array<Record<string, unknown>> | undefined) ?? [];
+
+      // Convert parameter list to JSON Schema object
+      const properties: Record<string, Record<string, unknown>> = {};
+      const required: string[] = [];
+      for (const param of params) {
+        const pName = param.name as string;
+        const pType = (param.type as string | undefined) ?? 'string';
+        const pDesc = param.description as string | undefined;
+        const prop: Record<string, unknown> = { type: pType };
+        if (pDesc) prop.description = pDesc;
+        properties[pName] = prop;
+        if (param.required === true) required.push(pName);
+      }
+
+      const inputSchema: Record<string, unknown> = { type: 'object', properties };
+      if (required.length > 0) inputSchema.required = required;
+
+      return {
+        id: slugify(toolName) || 'tool',
+        name: toolName,
+        description: toolDesc,
+        inputSchema,
+        outputSchema: { type: 'object', description: 'OpenClaw does not define output schemas — fill in manually' },
+        pricing: { model: 'free', amount: 0, currency: 'USD' },
+      };
+    });
+
+    // ── 4. Build the PactSpec ──────────────────────────────────────────────
+    const nameSlug = slugify(skillName) || 'skill';
+    const providerSlug = slugify(author).split('-')[0] || 'openclaw';
+    const endpointUrl = opts.endpoint ?? 'http://localhost:3000';
+
+    const specId = `urn:pactspec:openclaw:${nameSlug}`;
+
+    const spec = {
+      specVersion: '1.0.0',
+      id: specId,
+      name: skillName,
+      version: skillVersion,
+      description: skillDescription || undefined,
+      provider: { name: author, url: `https://clawhub.ai` },
+      endpoint: { url: endpointUrl, auth: { type: 'none' as const } },
+      skills,
+      tags: [...tags, 'openclaw'],
+    };
+
+    // ── 5. Write the spec ──────────────────────────────────────────────────
+    const outFile = opts.out ?? `${nameSlug}.pactspec.json`;
+    writeFileSync(resolve(outFile), JSON.stringify(spec, null, 2));
+    console.log(pc.green(`✓ Spec written to ${outFile}`));
+
+    // ── 6. Validate against bundled schema ─────────────────────────────────
+    const ajv = new Ajv({ strict: false, allErrors: true });
+    addFormats(ajv);
+    const validateFn = ajv.compile(bundledSchema as object);
+    if (validateFn(spec)) {
+      console.log(pc.green(`✓ Spec is valid`));
+    } else {
+      console.log(pc.yellow('\n  Spec has validation issues (fix before publishing):'));
+      for (const e of (validateFn.errors ?? [])) {
+        console.log(pc.yellow(`    ! ${e.instancePath || '/'} ${e.message}`));
+      }
+    }
+
+    // ── 7. Print warnings about manual attention needed ────────────────────
+    const warnings: string[] = [];
+    if (!opts.endpoint) {
+      warnings.push('endpoint.url is set to http://localhost:3000 — update to your actual MCP server URL');
+    }
+    warnings.push('outputSchema for each skill is a placeholder — define actual output schemas');
+    warnings.push('All skills defaulted to free pricing — edit to set paid pricing if needed');
+
+    if (warnings.length > 0) {
+      console.log(pc.yellow('\nWarnings (review before publishing):'));
+      for (const w of warnings) console.log(pc.yellow(`  ! ${w}`));
+    }
+
+    // ── 8. Publish if requested ────────────────────────────────────────────
+    if (opts.publish) {
+      if (!opts.agentId) {
+        console.error(pc.red('\n✗ --publish requires --agent-id'));
+        process.exit(1);
+      }
+      console.log(pc.dim(`\nPublishing to ${opts.registry}...`));
+      let pubRes: Response;
+      try {
+        const pubHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-Agent-ID': opts.agentId,
+        };
+        if (opts.publishToken) pubHeaders['X-Publish-Token'] = opts.publishToken;
+        pubRes = await fetch(`${opts.registry}/api/agents`, {
+          method: 'POST',
+          headers: pubHeaders,
+          body: JSON.stringify(spec),
+          signal: AbortSignal.timeout(30_000),
+        });
+      } catch (err) {
+        console.error(pc.red(`✗ Network error: ${(err as Error).message}`));
+        process.exit(1);
+      }
+      const pubText = await pubRes.text();
+      let pubData: { agent?: { id: string; spec_id?: string }; error?: string; errors?: string[] } = {};
+      try { pubData = JSON.parse(pubText); } catch { /* non-JSON */ }
+      if (pubRes.ok && pubData.agent) {
+        console.log(pc.green(`✓ Published: ${pubData.agent.spec_id ?? pubData.agent.id}`));
+        console.log(pc.dim(`  ${opts.registry}/agents/${pubData.agent.id}`));
+      } else {
+        console.error(pc.red(`✗ Publish failed: ${pubData.error ?? 'Unknown error'}`));
+        if (pubData.errors) for (const e of pubData.errors) console.error(pc.red(`  ${e}`));
+        process.exit(1);
+      }
+    } else {
+      console.log(pc.dim(`\nNext steps:`));
+      console.log(pc.dim(`  1. Edit ${outFile} — fill in outputSchema for each skill`));
+      if (!opts.endpoint) console.log(pc.dim(`  2. Set endpoint.url to your MCP server URL`));
+      console.log(pc.dim(`  ${opts.endpoint ? '2' : '3'}. pactspec validate ${outFile}`));
+      console.log(pc.dim(`  ${opts.endpoint ? '3' : '4'}. pactspec publish ${outFile} --agent-id <your-org>`));
+    }
+  });
+
 // ─── OpenAPI 3.x → PactSpec converter ────────────────────────────────────────
 
 interface ConvertResult {

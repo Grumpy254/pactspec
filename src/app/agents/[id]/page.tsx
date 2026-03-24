@@ -459,6 +459,49 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
+      {/* Interoperability */}
+      {agent.spec?.interop && (
+        <div className="bg-gray-900 border border-cyan-900/50 rounded-xl p-4 mb-8">
+          <p className="text-sm text-cyan-400 font-medium mb-3">Interoperability</p>
+          <div className="flex flex-wrap gap-2">
+            {agent.spec.interop.mcp?.serverUrl && (
+              <div className="bg-cyan-950/40 border border-cyan-800/40 rounded-lg px-3 py-2">
+                <span className="text-xs font-semibold text-cyan-300">MCP Server</span>
+                <p className="text-xs text-gray-400 font-mono mt-0.5 truncate max-w-xs">{agent.spec.interop.mcp.serverUrl}</p>
+                {agent.spec.interop.mcp.tools && agent.spec.interop.mcp.tools.length > 0 && (
+                  <p className="text-[10px] text-gray-500 mt-1">{agent.spec.interop.mcp.tools.length} tool{agent.spec.interop.mcp.tools.length !== 1 ? 's' : ''}</p>
+                )}
+              </div>
+            )}
+            {agent.spec.interop.acp?.supported && (
+              <div className="bg-blue-950/40 border border-blue-800/40 rounded-lg px-3 py-2">
+                <span className="text-xs font-semibold text-blue-300">ACP Sessions</span>
+                {agent.spec.interop.acp.sessionTypes && agent.spec.interop.acp.sessionTypes.length > 0 && (
+                  <div className="flex gap-1 mt-1 flex-wrap">
+                    {agent.spec.interop.acp.sessionTypes.map((t) => (
+                      <span key={t} className="text-[10px] bg-blue-900/50 text-blue-400 px-1.5 py-0.5 rounded">{t}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {agent.spec.interop.openapi?.specUrl && (
+              <div className="bg-cyan-950/40 border border-cyan-800/40 rounded-lg px-3 py-2">
+                <span className="text-xs font-semibold text-cyan-300">OpenAPI</span>
+                <a
+                  href={agent.spec.interop.openapi.specUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-cyan-400 underline mt-0.5 block truncate max-w-xs"
+                >
+                  {agent.spec.interop.openapi.specUrl}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Attestation */}
       {agent.attestation_hash && (
         <div className="bg-gray-900 border border-emerald-900 rounded-xl p-4 mb-8 flex items-start gap-3">

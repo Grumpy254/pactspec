@@ -57,6 +57,20 @@ export interface AgentSpecDelegation {
   terms?: string;               // URL to delegation agreement/terms
 }
 
+export interface AgentSpecInterop {
+  mcp?: {
+    serverUrl?: string;         // MCP server endpoint
+    tools?: string[];           // list of MCP tool names
+  };
+  acp?: {
+    supported: boolean;         // whether this agent supports ACP sessions
+    sessionTypes?: string[];    // e.g., ['coding', 'research', 'chat']
+  };
+  openapi?: {
+    specUrl?: string;           // URL to OpenAPI spec
+  };
+}
+
 export interface AgentSpec {
   specVersion: '1.0.0';
   id: string;
@@ -73,6 +87,7 @@ export interface AgentSpec {
     repository?: string;
   };
   delegation?: AgentSpecDelegation;
+  interop?: AgentSpecInterop;
 }
 
 // Benchmark types
