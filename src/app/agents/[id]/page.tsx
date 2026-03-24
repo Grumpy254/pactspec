@@ -333,6 +333,107 @@ function BenchmarkResultsSection({ agentId }: { agentId: string }) {
   );
 }
 
+function ShareSection({ agentId, specId }: { agentId: string; specId: string }) {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const baseUrl = 'https://pactspec.dev';
+  const badgeUrl = `${baseUrl}/api/badge/${agentId}`;
+  const agentUrl = `${baseUrl}/agents/${agentId}`;
+  const reportUrl = `${baseUrl}/agents/${agentId}/report`;
+  const markdownSnippet = `[![PactSpec Verified](${badgeUrl})](${agentUrl})`;
+
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(label);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  }
+
+  return (
+    <div className="mt-10">
+      <h2 className="text-xl font-semibold text-white mb-4">Share Verification</h2>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
+        {/* Badge preview */}
+        <div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Badge Preview</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/api/badge/${agentId}`}
+            alt="PactSpec badge"
+            height={20}
+            className="mb-3"
+          />
+        </div>
+
+        {/* Markdown */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500 uppercase tracking-wide">Badge for README (Markdown)</span>
+            <button
+              onClick={() => copyToClipboard(markdownSnippet, 'markdown')}
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              {copied === 'markdown' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <pre className="bg-gray-950 rounded-lg p-3 text-xs text-gray-300 font-mono overflow-x-auto">
+            {markdownSnippet}
+          </pre>
+        </div>
+
+        {/* HTML embed */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500 uppercase tracking-wide">Badge (HTML)</span>
+            <button
+              onClick={() => copyToClipboard(`<a href="${agentUrl}"><img src="${badgeUrl}" alt="PactSpec Verified" /></a>`, 'html')}
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              {copied === 'html' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <pre className="bg-gray-950 rounded-lg p-3 text-xs text-gray-300 font-mono overflow-x-auto">
+            {`<a href="${agentUrl}"><img src="${badgeUrl}" alt="PactSpec Verified" /></a>`}
+          </pre>
+        </div>
+
+        {/* Report URL */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500 uppercase tracking-wide">Verification Report URL</span>
+            <button
+              onClick={() => copyToClipboard(reportUrl, 'report')}
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              {copied === 'report' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <a
+            href={`/agents/${agentId}/report`}
+            className="text-sm text-indigo-400 hover:text-indigo-300 underline break-all"
+          >
+            {reportUrl}
+          </a>
+        </div>
+
+        {/* Badge URL (image only) */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500 uppercase tracking-wide">Badge Image URL</span>
+            <button
+              onClick={() => copyToClipboard(badgeUrl, 'badge')}
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              {copied === 'badge' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <code className="text-xs text-gray-400 font-mono break-all">{badgeUrl}</code>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [agent, setAgent] = useState<AgentRow | null>(null);
@@ -681,6 +782,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           {JSON.stringify(agent.spec, null, 2)}
         </pre>
       </details>
+
+      {/* Share */}
+      <ShareSection agentId={agent.id} specId={agent.spec_id} />
     </div>
   );
 }
