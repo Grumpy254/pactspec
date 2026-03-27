@@ -253,28 +253,28 @@ export default function RegistryPage() {
   return (
     <div>
       {/* Hero */}
-      <div className="text-center mb-14 pt-8">
-        <div className="inline-flex items-center gap-2 bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs px-3 py-1 rounded-full mb-6">
+      <div className="text-center mb-20 pt-12 animate-fade-in">
+        <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs px-4 py-1.5 rounded-full mb-8 backdrop-blur-sm">
           Open Protocol · v1.0.0
         </div>
-        <h1 className="text-5xl sm:text-6xl font-bold text-white mb-5 tracking-tight leading-tight">
+        <h1 className="text-5xl sm:text-7xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
           Know if your AI agent<br />
-          <span className="text-indigo-400">actually works.</span>
+          <span className="gradient-text">actually works.</span>
         </h1>
-        <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-8">
+        <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-10">
           PactSpec tests your agent against real benchmarks and re-tests continuously.
           Verification expires. When your agent degrades, you know before your users do.
         </p>
-        <div className="flex justify-center gap-3 flex-wrap">
+        <div className="flex justify-center gap-4 flex-wrap">
           <a
             href="/publish"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-500/30 hover:-translate-y-0.5"
           >
             Test your agent
           </a>
           <a
             href="/demo"
-            className="border border-gray-700 hover:border-gray-500 text-gray-300 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            className="border border-white/[0.1] hover:border-white/[0.2] bg-white/[0.03] hover:bg-white/[0.06] text-gray-300 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
           >
             See it in action
           </a>
@@ -283,57 +283,57 @@ export default function RegistryPage() {
 
       {/* Live stats */}
       {!loading && (
-        <div className="flex justify-center gap-8 mb-14 py-4 border-y border-gray-800/50">
+        <div className="flex justify-center gap-10 mb-20 py-5 border-y border-white/[0.06] animate-fade-in-delay-1">
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">{total}</div>
-            <div className="text-xs text-gray-500 mt-0.5">agents published</div>
+            <div className="text-3xl font-bold text-white">{total}</div>
+            <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">agents</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">{agents.filter(a => a.verified).length}</div>
-            <div className="text-xs text-gray-500 mt-0.5">verified</div>
+            <div className="text-3xl font-bold text-white">{agents.filter(a => a.verified).length}</div>
+            <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">verified</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">{agents.filter(a => (a.spec?.skills ?? []).some(s => s.pricing && s.pricing.model !== 'free')).length}</div>
-            <div className="text-xs text-gray-500 mt-0.5">with pricing</div>
+            <div className="text-3xl font-bold text-white">{agents.filter(a => (a.spec?.skills ?? []).some(s => s.pricing && s.pricing.model !== 'free')).length}</div>
+            <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">priced</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">7</div>
-            <div className="text-xs text-gray-500 mt-0.5">benchmark suites</div>
+            <div className="text-3xl font-bold text-white">7</div>
+            <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">benchmarks</div>
           </div>
         </div>
       )}
 
       {/* Three pillars */}
-      <div className="grid md:grid-cols-3 gap-4 mb-14">
-        <div className="bg-gray-900 border border-emerald-900/40 rounded-xl p-6">
-          <div className="text-emerald-400 text-sm font-semibold mb-2 uppercase tracking-wide">Test</div>
-          <p className="text-gray-300 text-sm leading-relaxed mb-4">
+      <div className="grid md:grid-cols-3 gap-5 mb-20 animate-fade-in-delay-2">
+        <div className="glow-card bg-[#111117] border border-white/[0.06] rounded-2xl p-7 hover:border-emerald-500/30 transition-all duration-300">
+          <div className="text-emerald-400 text-sm font-semibold mb-3 uppercase tracking-wider">Test</div>
+          <p className="text-gray-300 text-sm leading-relaxed mb-5">
             Self-tests prove it runs. Benchmarks prove it&apos;s accurate. Runtime telemetry proves it&apos;s working right now. Three signals, not one badge.
           </p>
-          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400 space-y-1.5">
+          <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 space-y-2 border border-white/[0.04]">
             <div><span className="text-gray-500">Self-tested:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
             <div><span className="text-gray-500">Benchmark:</span> <span className="text-emerald-400">94.7%</span> <span className="text-yellow-400">↓ from 97.2%</span> <span className="text-gray-600">last week</span></div>
             <div><span className="text-gray-500">Live:</span> <span className="text-emerald-400">98.1% success</span> <span className="text-gray-600">over 847 calls</span></div>
           </div>
         </div>
 
-        <div className="bg-gray-900 border border-violet-900/40 rounded-xl p-6">
-          <div className="text-violet-400 text-sm font-semibold mb-2 uppercase tracking-wide">Price</div>
-          <p className="text-gray-300 text-sm leading-relaxed mb-4">
+        <div className="glow-card bg-[#111117] border border-white/[0.06] rounded-2xl p-7 hover:border-violet-500/30 transition-all duration-300">
+          <div className="text-violet-400 text-sm font-semibold mb-3 uppercase tracking-wider">Price</div>
+          <p className="text-gray-300 text-sm leading-relaxed mb-5">
             Declare what your agent costs. The registry verifies the price matches what the endpoint actually charges. Consumers know the cost before they call.
           </p>
-          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400 leading-relaxed">
+          <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 leading-relaxed border border-white/[0.04]">
             <span className="text-violet-300">0.05 USD</span>/invocation via <span className="text-indigo-300">stripe</span><br />
             <span className="text-emerald-400">✓</span> Pricing verified against live endpoint
           </div>
         </div>
 
-        <div className="bg-gray-900 border border-indigo-900/40 rounded-xl p-6">
-          <div className="text-indigo-400 text-sm font-semibold mb-2 uppercase tracking-wide">Discover</div>
-          <p className="text-gray-300 text-sm leading-relaxed mb-4">
+        <div className="glow-card bg-[#111117] border border-white/[0.06] rounded-2xl p-7 hover:border-indigo-500/30 transition-all duration-300">
+          <div className="text-indigo-400 text-sm font-semibold mb-3 uppercase tracking-wider">Discover</div>
+          <p className="text-gray-300 text-sm leading-relaxed mb-5">
             Agents that pass get listed in the open registry. Search by capability, filter by quality score and price. Compare agents that do the same thing.
           </p>
-          <div className="bg-gray-950 rounded-lg p-3 font-mono text-xs text-gray-400">
+          <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 border border-white/[0.04]">
             <span className="text-gray-600">$</span> pactspec test agent.json<br />
             <span className="text-emerald-400">✓</span> 4/4 tests passed<br />
             <span className="text-gray-600">$</span> pactspec publish agent.json
