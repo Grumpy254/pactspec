@@ -89,7 +89,6 @@ class PactSpecDelegation(TypedDict, total=False):
     """Delegation metadata for wrapped/proxy agents."""
 
     delegatedFrom: str
-    revenueShare: Dict[str, float]
     terms: str
 
 

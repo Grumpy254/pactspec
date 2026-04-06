@@ -6,12 +6,12 @@ const dmSans = DM_Sans({ variable: '--font-geist-sans', subsets: ['latin'], weig
 const dmMono = DM_Mono({ variable: '--font-geist-mono', subsets: ['latin'], weight: ['400'] });
 
 export const metadata: Metadata = {
-  title: 'PactSpec — Know if your AI agent actually works',
+  title: 'PactSpec — The open standard for AI agent trust',
   description:
-    'Test your AI agents against real benchmarks, verify pricing, and track quality over time. Open protocol with registry, CLI, and framework integrations.',
+    'An open standard for declaring AI agent capabilities, verifying they work, and discovering them. One JSON file. No platform lock-in.',
   openGraph: {
-    title: 'PactSpec — Know if your AI agent actually works',
-    description: 'Run tests against live agent endpoints, score against domain-specific benchmarks, verify pricing, and track quality. Open protocol for AI agent trust.',
+    title: 'PactSpec — The open standard for AI agent trust',
+    description: 'Declare what your agent does, prove it works, state what it costs. Open standard with offline validation, any-registry publishing, and built-in verification.',
     url: 'https://pactspec.dev',
     siteName: 'PactSpec',
   },
@@ -29,12 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="gradient-text font-mono text-xl font-bold tracking-tight">{'<PactSpec />'}</span>
           </a>
           <nav className="flex items-center gap-6 text-sm text-gray-400">
+            <a href="/spec" className="hover:text-white transition-colors duration-200">Spec</a>
             <a href="/" className="hover:text-white transition-colors duration-200">Registry</a>
             <a href="/publish" className="hover:text-white transition-colors duration-200">Publish</a>
             <div className="relative group">
               <span className="hover:text-white transition-colors duration-200 cursor-default">Docs</span>
               <div className="absolute top-full right-0 mt-2 w-52 bg-[#111117] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-1">
                 <a href="/why" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Why PactSpec</a>
+                <a href="/spec" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">The Spec</a>
                 <a href="/pricing" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Pricing &amp; Monetization</a>
                 <a href="/benchmarks" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Benchmarks</a>
                 <a href="/guides/stripe-setup" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Stripe Setup Guide</a>

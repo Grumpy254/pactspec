@@ -1,4 +1,4 @@
-export type TrustTier = 'none' | 'self-tested' | 'benchmarked' | 'recently-verified' | 'production-validated';
+export type TrustTier = 'none' | 'self-tested' | 'recently-verified' | 'benchmarked';
 
 export interface VerificationAge {
   tier: TrustTier;
@@ -10,8 +10,6 @@ export interface VerificationAge {
 
 const FRESH_THRESHOLD_DAYS = 7;
 const STALE_THRESHOLD_DAYS = 30;
-const PRODUCTION_MIN_INVOCATIONS = 100;
-const PRODUCTION_MIN_SUCCESS_RATE = 0.9;
 
 export function getVerificationAge(agent: {
   verified?: boolean;
@@ -19,8 +17,6 @@ export function getVerificationAge(agent: {
   last_validation_at?: string | null;
   last_validation_pass_rate?: number | null;
   benchmark_results?: Array<{ run_at?: string; runAt?: string }>;
-  telemetry_total_invocations?: number | null;
-  telemetry_success_rate_30d?: number | null;
 }): VerificationAge {
   // Not verified at all
   if (!agent.verified) {
@@ -34,17 +30,11 @@ export function getVerificationAge(agent: {
 
   const daysAgo = Math.floor((Date.now() - new Date(verifiedAt).getTime()) / (1000 * 60 * 60 * 24));
 
-  // Check for production-validated tier first (highest tier)
-  const hasProductionTelemetry =
-    (agent.telemetry_total_invocations ?? 0) >= PRODUCTION_MIN_INVOCATIONS &&
-    (agent.telemetry_success_rate_30d ?? 0) >= PRODUCTION_MIN_SUCCESS_RATE;
-
   // Determine tier
   const hasBenchmarks = agent.benchmark_results && agent.benchmark_results.length > 0;
   let tier: TrustTier = 'self-tested';
-  if (hasBenchmarks) tier = 'benchmarked';
   if (daysAgo <= FRESH_THRESHOLD_DAYS) tier = 'recently-verified';
-  if (hasProductionTelemetry) tier = 'production-validated';
+  if (hasBenchmarks) tier = 'benchmarked';
 
   // Build label
   let label: string;
@@ -56,12 +46,11 @@ export function getVerificationAge(agent: {
 
   // Color
   let color: 'emerald' | 'yellow' | 'gray' | 'red';
-  if (hasProductionTelemetry) color = 'emerald';
-  else if (daysAgo <= FRESH_THRESHOLD_DAYS) color = 'emerald';
+  if (daysAgo <= FRESH_THRESHOLD_DAYS) color = 'emerald';
   else if (daysAgo <= STALE_THRESHOLD_DAYS) color = 'yellow';
   else color = 'red';
 
-  return { tier, label, fresh: daysAgo <= FRESH_THRESHOLD_DAYS || hasProductionTelemetry, daysAgo, color };
+  return { tier, label, fresh: daysAgo <= FRESH_THRESHOLD_DAYS, daysAgo, color };
 }
 
 // Format a benchmark score age

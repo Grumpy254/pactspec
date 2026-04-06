@@ -1,6 +1,6 @@
 # PactSpec
 
-Test your AI agents against real benchmarks. Track quality over time. Know when they break.
+The open standard for AI agent trust. Declare what your agent does, prove it works, state what it costs.
 
 **Registry:** [pactspec.dev](https://pactspec.dev)
 
@@ -81,7 +81,6 @@ GET  /api/agents                    Search/list agents
 POST /api/agents                    Publish agent spec
 GET  /api/agents/[id]               Get single agent
 POST /api/agents/[id]/validate      Run validation
-POST /api/agents/[id]/telemetry     Report success/failure
 GET  /api/benchmarks                List benchmarks
 POST /api/benchmarks/[id]/run       Run benchmark against agent
 GET  /api/badge/[id]                SVG badge for README

@@ -128,6 +128,9 @@ export default function OpenClawPage() {
           OpenClaw skills use informal SKILL.md files. PactSpec adds typed schemas,
           test suites, and benchmarks so you can actually verify they work.
         </p>
+        <p className="text-xs text-gray-600 mt-4">
+          The real integration is via the CLI: <code className="text-gray-400">pactspec from-openclaw &lt;skill-url&gt;</code>. The list below shows curated examples.
+        </p>
       </div>
 
       {/* How it works */}

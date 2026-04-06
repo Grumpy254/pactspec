@@ -50,10 +50,6 @@ export interface AgentSpecEndpoint {
 
 export interface AgentSpecDelegation {
   delegatedFrom?: string;      // spec_id of the upstream agent being wrapped
-  revenueShare?: {
-    upstream: number;           // percentage to upstream (0-100)
-    downstream: number;         // percentage kept by this agent (0-100)
-  };
   terms?: string;               // URL to delegation agreement/terms
 }
 
@@ -147,13 +143,6 @@ export interface AgentRow {
   published_at: string;
   updated_at: string;
   benchmark_results?: BenchmarkResult[];
-  telemetry_success_rate_24h?: number | null;
-  telemetry_success_rate_7d?: number | null;
-  telemetry_success_rate_30d?: number | null;
-  telemetry_latency_p50_ms?: number | null;
-  telemetry_latency_p95_ms?: number | null;
-  telemetry_total_invocations?: number | null;
-  telemetry_updated_at?: string | null;
 }
 
 // Test suite format agents publish at testSuite.url

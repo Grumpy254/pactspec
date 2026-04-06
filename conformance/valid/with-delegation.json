@@ -1,5 +1,5 @@
 {
-  "_comment": "Spec with delegation — wraps an upstream agent with revenue sharing",
+  "_comment": "Spec with delegation — wraps an upstream agent",
   "specVersion": "1.0.0",
   "id": "urn:pactspec:reseller:premium-summarizer",
   "name": "Premium Summarizer",
@@ -42,10 +42,6 @@
   }],
   "delegation": {
     "delegatedFrom": "urn:pactspec:originator:base-summarizer",
-    "revenueShare": {
-      "upstream": 70,
-      "downstream": 30
-    },
     "terms": "https://reseller.example.com/delegation-terms"
   }
 }

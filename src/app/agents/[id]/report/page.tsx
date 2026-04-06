@@ -73,7 +73,6 @@ export default function AgentReportPage({ params }: { params: Promise<{ id: stri
   const va = getVerificationAge(agent);
 
   const tierLabel =
-    va.tier === 'production-validated' ? 'Production Validated' :
     va.tier === 'benchmarked' ? 'Benchmarked' :
     va.tier === 'recently-verified' ? 'Recently Verified' :
     va.tier === 'self-tested' ? 'Self-Tested' :
@@ -173,56 +172,6 @@ export default function AgentReportPage({ params }: { params: Promise<{ id: stri
                   </div>
                 );
               })}
-            </div>
-          </div>
-        )}
-
-        {/* Runtime Telemetry */}
-        {(agent.telemetry_total_invocations ?? 0) > 0 && (
-          <div className="mb-10">
-            <h2 className="text-lg font-semibold text-white mb-4">Runtime Telemetry</h2>
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-              <div className="space-y-3 mb-5">
-                {([
-                  { label: '24h success', value: agent.telemetry_success_rate_24h },
-                  { label: '7d success', value: agent.telemetry_success_rate_7d },
-                  { label: '30d success', value: agent.telemetry_success_rate_30d },
-                ] as const).map(({ label, value }) => {
-                  if (value == null) return null;
-                  const pct = Math.round(value * 100);
-                  const bar = pct > 95 ? 'bg-emerald-500' : pct > 80 ? 'bg-yellow-500' : 'bg-red-500';
-                  const text = pct > 95 ? 'text-emerald-400' : pct > 80 ? 'text-yellow-400' : 'text-red-400';
-                  return (
-                    <div key={label}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-400">{label}</span>
-                        <span className={`text-sm font-mono font-semibold ${text}`}>{pct}%</span>
-                      </div>
-                      <div className="w-full bg-gray-800 rounded-full h-2">
-                        <div className={`h-2 rounded-full ${bar}`} style={{ width: `${Math.max(pct, 1)}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                {agent.telemetry_latency_p50_ms != null && (
-                  <div className="bg-gray-950 rounded-lg p-3">
-                    <div className="text-xs text-gray-500 mb-1">p50 latency</div>
-                    <div className="text-lg font-mono font-bold text-white">{agent.telemetry_latency_p50_ms}<span className="text-xs text-gray-500 ml-0.5">ms</span></div>
-                  </div>
-                )}
-                {agent.telemetry_latency_p95_ms != null && (
-                  <div className="bg-gray-950 rounded-lg p-3">
-                    <div className="text-xs text-gray-500 mb-1">p95 latency</div>
-                    <div className="text-lg font-mono font-bold text-white">{agent.telemetry_latency_p95_ms}<span className="text-xs text-gray-500 ml-0.5">ms</span></div>
-                  </div>
-                )}
-                <div className="bg-gray-950 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">Invocations</div>
-                  <div className="text-lg font-mono font-bold text-white">{(agent.telemetry_total_invocations ?? 0).toLocaleString()}</div>
-                </div>
-              </div>
             </div>
           </div>
         )}

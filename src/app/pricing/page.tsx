@@ -307,54 +307,15 @@ export default function PricingPage() {
       </Section>
 
       {/* Delegation */}
-      <Section title="Agent Delegation & Revenue Sharing">
+      <Section title="Agent Delegation">
         <p className="text-gray-400 text-sm leading-relaxed mb-6">
-          Wrap an existing agent with your own endpoint, add your own markup or value, and split
-          revenue with the upstream provider. Delegation lets organizations &ldquo;loan out&rdquo;
-          their agents to partners who resell or bundle them under their own brand.
+          If your agent wraps another agent, declare the upstream relationship. This gives consumers
+          transparency into the delegation chain so they can choose the original or the wrapper.
         </p>
 
-        <div className="space-y-6 mb-8">
-          <div className="flex gap-4 items-start">
-            <span className="shrink-0 w-6 h-6 rounded-full bg-cyan-900 border border-cyan-700 text-cyan-400 text-xs flex items-center justify-center font-bold">1</span>
-            <div>
-              <p className="text-white text-sm font-medium mb-1">Upstream publishes their agent</p>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                The original agent owner publishes their spec to the registry as usual.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-4 items-start">
-            <span className="shrink-0 w-6 h-6 rounded-full bg-cyan-900 border border-cyan-700 text-cyan-400 text-xs flex items-center justify-center font-bold">2</span>
-            <div>
-              <p className="text-white text-sm font-medium mb-1">Downstream creates a delegated spec</p>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                A partner publishes their own spec with a{' '}
-                <code className="text-cyan-400 text-xs bg-gray-800 px-1 py-0.5 rounded">delegation</code>{' '}
-                block pointing to the upstream agent&rsquo;s spec ID, along with revenue share terms.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-4 items-start">
-            <span className="shrink-0 w-6 h-6 rounded-full bg-cyan-900 border border-cyan-700 text-cyan-400 text-xs flex items-center justify-center font-bold">3</span>
-            <div>
-              <p className="text-white text-sm font-medium mb-1">Both agents appear in the registry</p>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Consumers can see the delegation chain and choose either the original or the
-                delegated version. The registry shows the upstream relationship transparently.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-xs text-gray-500 mb-3">Example: a delegated agent with 70/30 revenue split</p>
         <CodeBlock code={`{
   "delegation": {
     "delegatedFrom": "urn:pactspec:acme:original-agent",
-    "revenueShare": {
-      "upstream": 70,
-      "downstream": 30
-    },
     "terms": "https://acme.com/delegation-terms"
   }
 }`} />
@@ -368,10 +329,6 @@ export default function PricingPage() {
             </li>
             <li className="flex gap-2">
               <span className="text-cyan-400 shrink-0">&#10003;</span>
-              Revenue share percentages are declared in the spec and visible in the registry
-            </li>
-            <li className="flex gap-2">
-              <span className="text-cyan-400 shrink-0">&#10003;</span>
               Consumers see the full delegation chain for transparency
             </li>
             <li className="flex gap-2">
@@ -379,10 +336,6 @@ export default function PricingPage() {
               Link to a delegation agreement URL for legal terms
             </li>
           </ul>
-          <p className="text-xs text-gray-600 mt-4 leading-relaxed">
-            Revenue share declarations are metadata today. Automated revenue splitting via payment
-            middleware is planned for a future release.
-          </p>
         </div>
       </Section>
 

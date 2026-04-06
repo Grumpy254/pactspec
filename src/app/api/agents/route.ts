@@ -5,10 +5,11 @@ import { validateAgentSpec } from '@/lib/validator';
 import { specsEqual } from '@/lib/spec-hash';
 import type { AgentSpec } from '@/types/agent-spec';
 import { sanitizeSearchQuery } from '@/lib/search-sanitize';
+import { generatePublisherKey, hashKey } from '@/lib/publisher-keys';
 
-function checkPublishToken(req: NextRequest): boolean {
+function isAdminToken(req: NextRequest): boolean {
   const secret = process.env.PACTSPEC_PUBLISH_SECRET;
-  if (!secret) return true; // open registry mode when no secret is configured
+  if (!secret) return false;
   const token = req.headers.get('x-publish-token');
   if (!token || token.length !== secret.length) return false;
   return timingSafeEqual(Buffer.from(token), Buffer.from(secret));
@@ -102,12 +103,8 @@ export async function POST(req: NextRequest) {
   if (!agentIdHeader) {
     return NextResponse.json({ error: 'X-Agent-ID header required' }, { status: 400 });
   }
-  // Basic format check — prevent trivially empty or oversized identifiers
   if (agentIdHeader.length < 4 || agentIdHeader.length > 128 || !/^[\w\-.@:]+$/.test(agentIdHeader)) {
     return NextResponse.json({ error: 'X-Agent-ID is invalid' }, { status: 400 });
-  }
-  if (!checkPublishToken(req)) {
-    return NextResponse.json({ error: 'Invalid or missing X-Publish-Token' }, { status: 403 });
   }
 
   let body: unknown;
@@ -132,9 +129,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
+  // --- Publisher authentication ---
+  const admin = isAdminToken(req);
+  const publisherKeyHeader = req.headers.get('x-publisher-key');
+
+  // Look up existing agent to check ownership
   const { data: existing, error: existingError } = await supabase
     .from('agents')
-    .select('spec, verified, attestation_hash, verified_at')
+    .select('spec, verified, attestation_hash, verified_at, publisher_id')
     .eq('spec_id', spec.id)
     .maybeSingle();
 
@@ -143,6 +145,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to check existing agent' }, { status: 500 });
   }
 
+  let publisherId: string | null = null;
+  let newPublisherKey: string | null = null;
+
+  if (admin) {
+    // Admin token bypasses publisher key requirement
+    publisherId = existing?.publisher_id ?? null;
+  } else if (publisherKeyHeader) {
+    // Authenticate with publisher key
+    const keyHash = hashKey(publisherKeyHeader);
+    const { data: publisher } = await supabase
+      .from('publishers')
+      .select('id')
+      .eq('api_key_hash', keyHash)
+      .single();
+
+    if (!publisher) {
+      return NextResponse.json({ error: 'Invalid X-Publisher-Key' }, { status: 403 });
+    }
+
+    publisherId = publisher.id;
+
+    // Ownership check: if agent exists and belongs to a different publisher, reject
+    if (existing?.publisher_id && existing.publisher_id !== publisherId) {
+      return NextResponse.json(
+        { error: 'This agent is owned by another publisher. You can only update agents you published.' },
+        { status: 403 }
+      );
+    }
+  } else {
+    // No key provided — create a new publisher
+    if (existing?.publisher_id) {
+      // Agent exists and has an owner — require their key
+      return NextResponse.json(
+        { error: 'This agent is owned by a publisher. Provide X-Publisher-Key header to update it.' },
+        { status: 403 }
+      );
+    }
+
+    // First-time publish: create publisher and return key
+    const { rawKey, keyHash } = generatePublisherKey();
+    const { data: newPublisher, error: pubError } = await supabase
+      .from('publishers')
+      .insert({ api_key_hash: keyHash, name: spec.provider.name })
+      .select()
+      .single();
+
+    if (pubError || !newPublisher) {
+      console.error('Failed to create publisher:', pubError?.message);
+      return NextResponse.json({ error: 'Failed to create publisher' }, { status: 500 });
+    }
+
+    publisherId = newPublisher.id;
+    newPublisherKey = rawKey;
+  }
+
+  // --- Build upsert payload ---
   let shouldResetVerification = false;
   try {
     shouldResetVerification = existing != null && !specsEqual(existing.spec as AgentSpec, spec);
@@ -162,6 +220,7 @@ export async function POST(req: NextRequest) {
     spec: spec,
     tags: spec.tags ?? [],
     updated_at: new Date().toISOString(),
+    publisher_id: publisherId,
   };
 
   if (spec.delegation?.delegatedFrom) {
@@ -174,7 +233,6 @@ export async function POST(req: NextRequest) {
     upsertPayload.verified_at = null;
   }
 
-  // Upsert agent — reset verification when spec changes
   const { data: agent, error } = await supabase
     .from('agents')
     .upsert(upsertPayload, { onConflict: 'spec_id', ignoreDuplicates: false })
@@ -186,8 +244,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to save agent' }, { status: 500 });
   }
 
-  // Update normalized skills: upsert the new set (no duplicates via unique constraint),
-  // then delete any rows that are no longer in the spec.
+  // Update normalized skills
   if (agent && spec.skills.length > 0) {
     const skillRows = spec.skills.map((skill) => ({
       agent_id: agent.id,
@@ -211,7 +268,6 @@ export async function POST(req: NextRequest) {
       console.error('Skill upsert failed:', upsertError.message);
       return NextResponse.json({ error: 'Failed to save skills' }, { status: 500 });
     }
-    // Remove skills that were deleted from the spec
     const currentSkillIds = spec.skills.map((s) => s.id);
     const { error: deleteError } = await supabase
       .from('skills')
@@ -223,5 +279,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ agent }, { status: 201 });
+  // Build response — include publisher key on first publish
+  const response: Record<string, unknown> = { agent };
+  if (newPublisherKey) {
+    response.publisherKey = newPublisherKey;
+    response.message = 'Save this key — it is shown only once. You need it to update or republish this agent.';
+  }
+
+  return NextResponse.json(response, { status: 201 });
 }

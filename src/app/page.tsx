@@ -41,8 +41,8 @@ function AgentCard({ agent, highlightPricing }: { agent: AgentRow; highlightPric
                 red: 'bg-red-900/50 text-red-400 border-red-800',
                 gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
               };
-              const tierLabel = va.tier === 'production-validated' ? 'Production validated' : va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
-              const tierColor = va.tier === 'production-validated' ? 'text-emerald-300' : va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+              const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
+              const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
               return (
                 <>
                   <span className={`shrink-0 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${colorMap[va.color]}`}>
@@ -110,17 +110,6 @@ function AgentCard({ agent, highlightPricing }: { agent: AgentRow; highlightPric
           ))}
         </div>
         <div className="flex items-center gap-3">
-          {(agent.telemetry_total_invocations ?? 0) > 0 && agent.telemetry_success_rate_7d != null && (() => {
-            const pct = Math.round(agent.telemetry_success_rate_7d * 100);
-            const dotColor = pct > 95 ? 'bg-emerald-400' : pct > 80 ? 'bg-yellow-400' : 'bg-red-400';
-            const textColor = pct > 95 ? 'text-emerald-400' : pct > 80 ? 'text-yellow-400' : 'text-red-400';
-            return (
-              <span className={`inline-flex items-center gap-1 font-mono ${textColor}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                {pct}% live
-              </span>
-            );
-          })()}
           {passRate != null && (
             <span className="text-emerald-400 font-mono">{Math.round(passRate * 100)}% pass</span>
           )}
@@ -255,28 +244,31 @@ export default function RegistryPage() {
       {/* Hero */}
       <div className="text-center mb-20 pt-12 animate-fade-in">
         <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs px-4 py-1.5 rounded-full mb-8 backdrop-blur-sm">
-          Open Protocol · v1.0.0
+          Open Standard · v1.0.0
         </div>
         <h1 className="text-5xl sm:text-7xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
-          Know if your AI agent<br />
-          <span className="gradient-text">actually works.</span>
+          The open standard for<br />
+          <span className="gradient-text">AI agent trust.</span>
         </h1>
-        <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-10">
-          PactSpec tests your agent against real benchmarks and re-tests continuously.
-          Verification expires. When your agent degrades, you know before your users do.
+        <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-4">
+          One JSON file declares what your agent does, proves it works, and states what it costs.
+          No platform lock-in &mdash; validate offline, publish to any registry, or self-host.
+        </p>
+        <p className="text-sm text-gray-500 max-w-xl mx-auto leading-relaxed mb-10">
+          Verification expires. Benchmarks re-run. When your agent degrades, you know before your users do.
         </p>
         <div className="flex justify-center gap-4 flex-wrap">
           <a
             href="/publish"
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-500/30 hover:-translate-y-0.5"
           >
-            Test your agent
+            Publish your agent
           </a>
           <a
-            href="/demo"
+            href="/spec"
             className="border border-white/[0.1] hover:border-white/[0.2] bg-white/[0.03] hover:bg-white/[0.06] text-gray-300 px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
           >
-            See it in action
+            Read the spec
           </a>
         </div>
       </div>
@@ -306,32 +298,33 @@ export default function RegistryPage() {
       {/* Three pillars */}
       <div className="grid md:grid-cols-3 gap-5 mb-20 animate-fade-in-delay-2">
         <div className="glow-card bg-[#111117] border border-white/[0.06] rounded-2xl p-7 hover:border-emerald-500/30 transition-all duration-300">
-          <div className="text-emerald-400 text-sm font-semibold mb-3 uppercase tracking-wider">Test</div>
+          <div className="text-emerald-400 text-sm font-semibold mb-3 uppercase tracking-wider">Declare</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-5">
-            Self-tests prove it runs. Benchmarks prove it&apos;s accurate. Runtime telemetry proves it&apos;s working right now. Three signals, not one badge.
+            One JSON file describes skills, schemas, pricing, and test suites. Works offline. No platform required.
           </p>
           <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 space-y-2 border border-white/[0.04]">
-            <div><span className="text-gray-500">Self-tested:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
-            <div><span className="text-gray-500">Benchmark:</span> <span className="text-emerald-400">94.7%</span> <span className="text-yellow-400">↓ from 97.2%</span> <span className="text-gray-600">last week</span></div>
-            <div><span className="text-gray-500">Live:</span> <span className="text-emerald-400">98.1% success</span> <span className="text-gray-600">over 847 calls</span></div>
+            <div><span className="text-gray-600">$</span> pactspec init</div>
+            <div><span className="text-gray-600">$</span> pactspec validate agent.json</div>
+            <div><span className="text-emerald-400">✓</span> Valid PactSpec v1.0.0</div>
           </div>
         </div>
 
         <div className="glow-card bg-[#111117] border border-white/[0.06] rounded-2xl p-7 hover:border-violet-500/30 transition-all duration-300">
-          <div className="text-violet-400 text-sm font-semibold mb-3 uppercase tracking-wider">Price</div>
+          <div className="text-violet-400 text-sm font-semibold mb-3 uppercase tracking-wider">Verify</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-5">
-            Declare what your agent costs. The registry verifies the price matches what the endpoint actually charges. Consumers know the cost before they call.
+            Self-tests prove it runs. Benchmarks prove it&apos;s accurate. The registry runs both directly against the live endpoint &mdash; no self-reported metrics.
           </p>
-          <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 leading-relaxed border border-white/[0.04]">
-            <span className="text-violet-300">0.05 USD</span>/invocation via <span className="text-indigo-300">stripe</span><br />
-            <span className="text-emerald-400">✓</span> Pricing verified against live endpoint
+          <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 space-y-2 border border-white/[0.04]">
+            <div><span className="text-gray-500">Self-tested:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
+            <div><span className="text-gray-500">Benchmark:</span> <span className="text-emerald-400">94.7%</span> <span className="text-gray-600">medical-coding</span></div>
+            <div><span className="text-gray-500">Attestation:</span> <span className="text-gray-500">sha256:a4f2...</span></div>
           </div>
         </div>
 
         <div className="glow-card bg-[#111117] border border-white/[0.06] rounded-2xl p-7 hover:border-indigo-500/30 transition-all duration-300">
           <div className="text-indigo-400 text-sm font-semibold mb-3 uppercase tracking-wider">Discover</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-5">
-            Agents that pass get listed in the open registry. Search by capability, filter by quality score and price. Compare agents that do the same thing.
+            Search by capability, filter by quality and price. The registry is a discovery layer &mdash; agents are invoked directly at their own endpoints.
           </p>
           <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 border border-white/[0.04]">
             <span className="text-gray-600">$</span> pactspec test agent.json<br />
@@ -340,27 +333,6 @@ export default function RegistryPage() {
           </div>
         </div>
       </div>
-
-      {/* Monetized Agents */}
-      {(() => {
-        const monetizedAgents = agents.filter((a) =>
-          (a.spec?.skills ?? []).some((s) => s.pricing && s.pricing.model !== 'free')
-        );
-        if (monetizedAgents.length === 0) return null;
-        return (
-          <div className="mb-14">
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold text-white">Monetized Agents</h2>
-              <p className="text-sm text-gray-500 mt-1">Agents with declared pricing and payment protocols</p>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-thin">
-              {monetizedAgents.map((agent) => (
-                <MonetizedAgentCard key={agent.id} agent={agent} />
-              ))}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Registry */}
       <div className="flex items-center justify-between mb-5">
@@ -457,6 +429,27 @@ export default function RegistryPage() {
           ))}
         </div>
       )}
+
+      {/* Monetized Agents */}
+      {(() => {
+        const monetizedAgents = agents.filter((a) =>
+          (a.spec?.skills ?? []).some((s) => s.pricing && s.pricing.model !== 'free')
+        );
+        if (monetizedAgents.length === 0) return null;
+        return (
+          <div className="mt-14">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-white">Monetized Agents</h2>
+              <p className="text-sm text-gray-500 mt-1">Agents with declared pricing and payment protocols</p>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-thin">
+              {monetizedAgents.map((agent) => (
+                <MonetizedAgentCard key={agent.id} agent={agent} />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

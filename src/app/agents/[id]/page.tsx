@@ -128,6 +128,9 @@ function SkillPanel({ skill, agentId, pricingResult, driftInfo, latestCheck }: {
                 <p className="text-xs text-gray-500 mt-0.5">
                   Checked {new Date(driftInfo.pricing_last_checked_at).toLocaleDateString()}
                 </p>
+                <p className="text-[11px] text-gray-600 mt-1">
+                  Point-in-time check. The endpoint controls actual pricing at call time.
+                </p>
               </div>
             )}
           </div>
@@ -515,8 +518,8 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                   red: 'bg-red-900/50 text-red-400 border-red-800',
                   gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
                 };
-                const tierLabel = va.tier === 'production-validated' ? 'Production validated' : va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
-                const tierColor = va.tier === 'production-validated' ? 'text-emerald-300' : va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+                const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
+                const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
                 return (
                   <>
                     <span className={`inline-flex items-center gap-1 text-sm px-3 py-0.5 rounded-full border ${colorMap[va.color]}`}>
@@ -639,11 +642,6 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 {agent.spec.delegation.delegatedFrom}
               </span>
             </p>
-            {agent.spec.delegation.revenueShare && (
-              <p className="text-xs text-gray-400 mt-1">
-                Revenue share: {agent.spec.delegation.revenueShare.upstream}% upstream / {agent.spec.delegation.revenueShare.downstream}% this agent
-              </p>
-            )}
             {agent.spec.delegation.terms && /^https?:\/\//.test(agent.spec.delegation.terms) && (
               <a
                 href={agent.spec.delegation.terms}
@@ -654,6 +652,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 Delegation terms
               </a>
             )}
+            <p className="text-[11px] text-gray-600 mt-2 leading-relaxed">
+              Delegation is self-declared. The registry records this claim but does not verify the upstream relationship.
+            </p>
           </div>
         </div>
       )}
@@ -700,78 +701,6 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Benchmark Results */}
       <BenchmarkResultsSection agentId={agent.id} />
-
-      {/* Runtime Performance (Telemetry) */}
-      {(agent.telemetry_total_invocations ?? 0) > 0 && (
-        <div className="mb-10">
-          <h2 className="text-xl font-semibold text-white mb-4">Runtime Performance</h2>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            {/* Success rate bars */}
-            <div className="space-y-4 mb-6">
-              {([
-                { label: '24h', value: agent.telemetry_success_rate_24h },
-                { label: '7d', value: agent.telemetry_success_rate_7d },
-                { label: '30d', value: agent.telemetry_success_rate_30d },
-              ] as const).map(({ label, value }) => {
-                if (value == null) return null;
-                const pct = Math.round(value * 100);
-                const barColor = pct > 95 ? 'bg-emerald-500' : pct > 80 ? 'bg-yellow-500' : 'bg-red-500';
-                const textColor = pct > 95 ? 'text-emerald-400' : pct > 80 ? 'text-yellow-400' : 'text-red-400';
-                return (
-                  <div key={label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-400">Success rate ({label})</span>
-                      <span className={`text-sm font-mono font-semibold ${textColor}`}>{pct}%</span>
-                    </div>
-                    <div className="w-full bg-gray-800 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${barColor}`}
-                        style={{ width: `${Math.max(pct, 1)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Latency + invocations */}
-            <div className="grid grid-cols-3 gap-4">
-              {agent.telemetry_latency_p50_ms != null && (
-                <div className="bg-gray-950 rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">Latency p50</div>
-                  <div className="text-lg font-mono font-bold text-white">{agent.telemetry_latency_p50_ms}<span className="text-xs text-gray-500 ml-0.5">ms</span></div>
-                </div>
-              )}
-              {agent.telemetry_latency_p95_ms != null && (
-                <div className="bg-gray-950 rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">Latency p95</div>
-                  <div className="text-lg font-mono font-bold text-white">{agent.telemetry_latency_p95_ms}<span className="text-xs text-gray-500 ml-0.5">ms</span></div>
-                </div>
-              )}
-              <div className="bg-gray-950 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Total invocations</div>
-                <div className="text-lg font-mono font-bold text-white">{(agent.telemetry_total_invocations ?? 0).toLocaleString()}</div>
-              </div>
-            </div>
-
-            {/* Last updated */}
-            {agent.telemetry_updated_at && (
-              <div className="mt-4 text-xs text-gray-600">
-                Last updated: {(() => {
-                  const mins = Math.floor((Date.now() - new Date(agent.telemetry_updated_at).getTime()) / 60000);
-                  if (mins < 1) return 'just now';
-                  if (mins === 1) return '1 minute ago';
-                  if (mins < 60) return `${mins} minutes ago`;
-                  const hours = Math.floor(mins / 60);
-                  if (hours === 1) return '1 hour ago';
-                  if (hours < 24) return `${hours} hours ago`;
-                  return `${Math.floor(hours / 24)} days ago`;
-                })()}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Raw spec */}
       <details>

@@ -108,20 +108,6 @@ export async function GET(
     return new NextResponse(svg, { headers });
   }
 
-  // Style: telemetry — show live success rate
-  if (style === 'telemetry') {
-    const rate = agent.telemetry_success_rate_24h ?? agent.telemetry_success_rate_7d ?? agent.telemetry_success_rate_30d;
-    if (rate != null) {
-      const pct = Math.round(rate * 100);
-      const color = pct >= 95 ? '#4c1' : pct >= 80 ? '#dfb317' : '#e05d44';
-      const svg = generateBadgeSvg('PactSpec', `${pct}% live`, color);
-      return new NextResponse(svg, { headers });
-    }
-
-    const svg = generateBadgeSvg('PactSpec', 'no telemetry', '#9f9f9f');
-    return new NextResponse(svg, { headers });
-  }
-
   // Default: verification status badge
   const va = getVerificationAge(agent);
 
