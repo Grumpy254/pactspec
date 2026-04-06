@@ -1,7 +1,7 @@
 export const metadata = {
-  title: 'PactSpec — The Open Standard for AI Agent Trust',
+  title: 'PactSpec — An Open-Source Spec for AI Agent Trust',
   description:
-    'An open standard for declaring AI agent capabilities, proving they work, and stating what they cost. One JSON file. No platform lock-in.',
+    'An open-source spec for declaring AI agent capabilities, proving they work, and stating what they cost. One JSON file. No platform lock-in.',
 };
 
 function CodeBlock({ code, lang = 'json' }: { code: string; lang?: string }) {
@@ -27,7 +27,7 @@ export default function SpecPage() {
       {/* Origin + pitch */}
       <div className="mb-16 pt-4">
         <div className="inline-flex items-center gap-2 bg-indigo-950 border border-indigo-800 text-indigo-300 text-xs px-3 py-1 rounded-full mb-6">
-          v1.0.0 &middot; Open Standard
+          v1.0.0 &middot; Open Source
         </div>
         <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
           Every agent responds.<br />
@@ -298,7 +298,7 @@ pactspec publish agent.json --registry https://registry.internal.acme.dev`} />
                 ['Skill-level I/O schemas', '\u2713', '\u2713 input only', '\u2713 input + output'],
                 ['Pricing', '\u2717', '\u2717', '\u2713 model + amount + protocol'],
                 ['Test suites', '\u2717', '\u2717', '\u2713 HTTP roundtrip + benchmarks'],
-                ['Verified records', '\u2717', '\u2717', '\u2713 SHA-256 attestation'],
+                ['Verified records', '\u2717', '\u2717', '\u2713 Ed25519 signed results'],
                 ['Public registry', '~ commercial', '\u2717', '\u2713 open'],
                 ['Payment handling', '\u2717', '\u2717', '\u2713 x402 + Stripe'],
               ].map(([cap, openapi, mcp, pactspec]) => (
@@ -369,7 +369,7 @@ pactspec publish agent.json --registry https://registry.internal.acme.dev`} />
             <p className="text-white font-semibold text-sm mb-2">Why trust it?</p>
             <p className="text-gray-400 text-sm leading-relaxed">
               Every result is reproducible. Run <code className="text-gray-300 bg-gray-800 px-1 rounded text-xs">pactspec test</code> yourself.
-              Results are stored as SHA-256 attestation records. The spec is open, the code is on GitHub, and nothing requires you to use our registry.
+              Results are stored as Ed25519 signed results records. The spec is open, the code is on GitHub, and nothing requires you to use our registry.
             </p>
           </div>
         </div>

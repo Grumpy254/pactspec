@@ -6,12 +6,12 @@ const dmSans = DM_Sans({ variable: '--font-geist-sans', subsets: ['latin'], weig
 const dmMono = DM_Mono({ variable: '--font-geist-mono', subsets: ['latin'], weight: ['400'] });
 
 export const metadata: Metadata = {
-  title: 'PactSpec — The open standard for AI agent trust',
+  title: 'PactSpec — An open-source spec for AI agent trust',
   description:
-    'An open standard for declaring AI agent capabilities, verifying they work, and discovering them. One JSON file. No platform lock-in.',
+    'An open-source spec for declaring AI agent capabilities, verifying they work, and discovering them. One JSON file. No platform lock-in.',
   openGraph: {
-    title: 'PactSpec — The open standard for AI agent trust',
-    description: 'Declare what your agent does, prove it works, state what it costs. Open standard with offline validation, any-registry publishing, and built-in verification.',
+    title: 'PactSpec — An open-source spec for AI agent trust',
+    description: 'Declare what your agent does, prove it works, state what it costs. Open-source spec with offline validation, any-registry publishing, and built-in verification.',
     url: 'https://pactspec.dev',
     siteName: 'PactSpec',
   },
@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="max-w-5xl mx-auto px-6 py-12">{children}</main>
         <footer className="border-t border-white/[0.06] mt-24 px-6 py-8 text-center text-gray-600 text-sm">
-          PactSpec v1 &mdash; Open Protocol &mdash;{' '}
+          PactSpec v1 &mdash; Open Source &mdash;{' '}
           <a href="/api/spec/v1" className="text-gray-500 hover:text-gray-300 transition-colors">
             schema/v1.json
           </a>

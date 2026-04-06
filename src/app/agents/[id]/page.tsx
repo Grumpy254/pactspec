@@ -518,8 +518,8 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                   red: 'bg-red-900/50 text-red-400 border-red-800',
                   gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
                 };
-                const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
-                const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+                const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : 'Health check passed';
+                const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : 'text-gray-500';
                 return (
                   <>
                     <span className={`inline-flex items-center gap-1 text-sm px-3 py-0.5 rounded-full border ${colorMap[va.color]}`}>
@@ -606,25 +606,35 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* Attestation */}
+      {/* Registry signature */}
       {agent.attestation_hash && (
         <div className="bg-gray-900 border border-emerald-900 rounded-xl p-4 mb-8 flex items-start gap-3">
           <div className="shrink-0 w-2 h-2 rounded-full bg-emerald-400 mt-1.5" />
           <div>
-            <p className="text-sm text-emerald-400 font-medium mb-1">Verified Record (SHA-256 fingerprint)</p>
-            <p className="text-xs text-gray-400 font-mono break-all">{agent.attestation_hash}</p>
+            <p className="text-sm text-emerald-400 font-medium mb-1">Registry-signed result</p>
+            <div className="space-y-1 mt-2">
+              <p className="text-xs text-gray-500">Content hash (SHA-256)</p>
+              <p className="text-xs text-gray-400 font-mono break-all">{agent.attestation_hash}</p>
+            </div>
+            {agent.signature && (
+              <details className="mt-2">
+                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300">Ed25519 signature</summary>
+                <p className="text-xs text-gray-400 font-mono break-all mt-1">{agent.signature}</p>
+              </details>
+            )}
             {agent.verified_at && (() => {
               const va = getVerificationAge(agent);
               const ageColor = va.color === 'emerald' ? 'text-emerald-400' : va.color === 'yellow' ? 'text-yellow-400' : va.color === 'red' ? 'text-red-400' : 'text-gray-500';
               return (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-2">
                   <span className={ageColor}>{va.label}</span>
                   {' '}— {new Date(agent.verified_at).toLocaleString()}
                 </p>
               );
             })()}
             <p className="text-xs text-gray-600 mt-1">
-              Tamper-evident record — changes if agent ID, skill, results, or timestamp changes. Not a cryptographic signature.
+              Signed by the registry&apos;s Ed25519 key. Verify independently at{' '}
+              <a href="/api/registry-key" target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline">/api/registry-key</a>.
             </p>
           </div>
         </div>

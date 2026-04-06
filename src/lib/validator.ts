@@ -10,7 +10,7 @@ import type {
   TestResult,
   ValidationResult,
 } from '@/types/agent-spec';
-import { generateAttestationHash } from './attestation';
+import { signValidationResult } from './attestation';
 import type { AuthType } from '@/types/agent-spec';
 
 const ajv = new Ajv({ strict: false });
@@ -363,14 +363,22 @@ export async function runValidation(
 
   const allPassed = results.every((r) => r.passed);
   const timestamp = new Date().toISOString();
-  const attestationHash = allPassed
-    ? generateAttestationHash(agent.id, skillId, results, timestamp)
-    : undefined;
+  let signature: string | undefined;
+  let contentHash: string | undefined;
+
+  if (allPassed) {
+    const signed = signValidationResult(agent.id, skillId, results, timestamp);
+    signature = signed.signature;
+    contentHash = signed.contentHash;
+  }
 
   return {
     status: allPassed ? 'PASSED' : 'FAILED',
     results,
-    attestationHash,
+    signature,
+    contentHash,
+    // Backwards compat — old clients expect attestationHash
+    attestationHash: contentHash,
     durationMs: Date.now() - startTotal,
   };
 }

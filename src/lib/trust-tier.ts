@@ -1,9 +1,19 @@
-export type TrustTier = 'none' | 'self-tested' | 'recently-verified' | 'benchmarked';
+/**
+ * Trust tiers for agents.
+ *
+ * - none: Not verified at all.
+ * - verified: Passed its own test suite recently. This is a HEALTH CHECK —
+ *   the agent runs and responds correctly to its own tests. The agent controls
+ *   both the endpoint and the test suite, so this does not prove quality.
+ * - benchmarked: Scored on independent benchmark suites with known correct
+ *   answers. The agent does not control the questions. This is the real trust signal.
+ */
+export type TrustTier = 'none' | 'verified' | 'benchmarked';
 
 export interface VerificationAge {
   tier: TrustTier;
-  label: string;           // "Verified 2 days ago" or "Stale (34 days)"
-  fresh: boolean;           // true if within 7 days
+  label: string;
+  fresh: boolean;
   daysAgo: number | null;
   color: 'emerald' | 'yellow' | 'gray' | 'red';
 }
@@ -18,42 +28,44 @@ export function getVerificationAge(agent: {
   last_validation_pass_rate?: number | null;
   benchmark_results?: Array<{ run_at?: string; runAt?: string }>;
 }): VerificationAge {
-  // Not verified at all
   if (!agent.verified) {
     return { tier: 'none', label: 'Not verified', fresh: false, daysAgo: null, color: 'gray' };
   }
 
   const verifiedAt = agent.verified_at || agent.last_validation_at;
   if (!verifiedAt) {
-    return { tier: 'self-tested', label: 'Verified (no date)', fresh: false, daysAgo: null, color: 'gray' };
+    return { tier: 'verified', label: 'Verified (no date)', fresh: false, daysAgo: null, color: 'gray' };
   }
 
   const daysAgo = Math.floor((Date.now() - new Date(verifiedAt).getTime()) / (1000 * 60 * 60 * 24));
 
-  // Determine tier
   const hasBenchmarks = agent.benchmark_results && agent.benchmark_results.length > 0;
-  let tier: TrustTier = 'self-tested';
-  if (daysAgo <= FRESH_THRESHOLD_DAYS) tier = 'recently-verified';
-  if (hasBenchmarks) tier = 'benchmarked';
+  const tier: TrustTier = hasBenchmarks ? 'benchmarked' : 'verified';
 
   // Build label
   let label: string;
   if (daysAgo === 0) label = 'Verified today';
   else if (daysAgo === 1) label = 'Verified yesterday';
-  else if (daysAgo <= FRESH_THRESHOLD_DAYS) label = `Verified ${daysAgo}d ago`;
   else if (daysAgo <= STALE_THRESHOLD_DAYS) label = `Verified ${daysAgo}d ago`;
   else label = `Stale (${daysAgo}d ago)`;
 
-  // Color
+  // Color: benchmarked agents get emerald if fresh, verified agents get yellow (it's just a health check)
   let color: 'emerald' | 'yellow' | 'gray' | 'red';
-  if (daysAgo <= FRESH_THRESHOLD_DAYS) color = 'emerald';
-  else if (daysAgo <= STALE_THRESHOLD_DAYS) color = 'yellow';
-  else color = 'red';
+  if (daysAgo > STALE_THRESHOLD_DAYS) {
+    color = 'red';
+  } else if (hasBenchmarks && daysAgo <= FRESH_THRESHOLD_DAYS) {
+    color = 'emerald';
+  } else if (hasBenchmarks) {
+    color = 'yellow';
+  } else if (daysAgo <= FRESH_THRESHOLD_DAYS) {
+    color = 'yellow'; // health check only — not emerald
+  } else {
+    color = 'yellow';
+  }
 
-  return { tier, label, fresh: daysAgo <= FRESH_THRESHOLD_DAYS, daysAgo, color };
+  return { tier, label, fresh: !!hasBenchmarks && daysAgo <= FRESH_THRESHOLD_DAYS, daysAgo, color };
 }
 
-// Format a benchmark score age
 export function formatScoreAge(runAt: string): { label: string; fresh: boolean } {
   const daysAgo = Math.floor((Date.now() - new Date(runAt).getTime()) / (1000 * 60 * 60 * 24));
   if (daysAgo === 0) return { label: 'today', fresh: true };

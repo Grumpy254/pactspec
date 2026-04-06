@@ -1,6 +1,6 @@
 # PactSpec
 
-The open standard for AI agent trust. Declare what your agent does, prove it works, state what it costs.
+An open-source spec for AI agent trust. Declare what your agent does, prove it works, state what it costs.
 
 **Registry:** [pactspec.dev](https://pactspec.dev)
 
@@ -37,7 +37,7 @@ app.use(pactspec({
 
 ## What it does
 
-PactSpec is an open standard for AI agent capability declaration. One JSON file per agent declares:
+PactSpec is an open-source specification for AI agent capability declaration. One JSON file per agent declares:
 
 - **Skills** — what the agent does, with typed input/output schemas
 - **Pricing** — what it costs (per-invocation, per-token, per-second) and how to pay (Stripe, x402)

@@ -41,8 +41,8 @@ function AgentCard({ agent, highlightPricing }: { agent: AgentRow; highlightPric
                 red: 'bg-red-900/50 text-red-400 border-red-800',
                 gray: 'bg-gray-800/50 text-gray-400 border-gray-700',
               };
-              const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : va.tier === 'recently-verified' ? 'Recently verified' : 'Self-tested';
-              const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : va.tier === 'recently-verified' ? 'text-emerald-400' : 'text-gray-500';
+              const tierLabel = va.tier === 'benchmarked' ? 'Benchmarked' : 'Health check passed';
+              const tierColor = va.tier === 'benchmarked' ? 'text-indigo-400' : 'text-gray-500';
               return (
                 <>
                   <span className={`shrink-0 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${colorMap[va.color]}`}>
@@ -244,10 +244,10 @@ export default function RegistryPage() {
       {/* Hero */}
       <div className="text-center mb-20 pt-12 animate-fade-in">
         <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs px-4 py-1.5 rounded-full mb-8 backdrop-blur-sm">
-          Open Standard · v1.0.0
+          Open-Source Spec · v1.0.0
         </div>
         <h1 className="text-5xl sm:text-7xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
-          The open standard for<br />
+          The open-source spec for<br />
           <span className="gradient-text">AI agent trust.</span>
         </h1>
         <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed mb-4">
@@ -317,7 +317,7 @@ export default function RegistryPage() {
           <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 space-y-2 border border-white/[0.04]">
             <div><span className="text-gray-500">Self-tested:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
             <div><span className="text-gray-500">Benchmark:</span> <span className="text-emerald-400">94.7%</span> <span className="text-gray-600">medical-coding</span></div>
-            <div><span className="text-gray-500">Attestation:</span> <span className="text-gray-500">sha256:a4f2...</span></div>
+            <div><span className="text-gray-500">Signed:</span> <span className="text-gray-500">ed25519:a4f2...</span></div>
           </div>
         </div>
 

@@ -131,6 +131,7 @@ export interface AgentRow {
   tags: string[];
   verified: boolean;
   attestation_hash: string | null;
+  signature: string | null;
   verified_at: string | null;
   last_validation_pass_rate?: number | null;
   last_validation_test_count?: number | null;
@@ -179,7 +180,9 @@ export interface TestResult {
 export interface ValidationResult {
   status: 'PASSED' | 'FAILED' | 'ERROR' | 'TIMEOUT';
   results: TestResult[];
-  attestationHash?: string;
+  signature?: string;
+  contentHash?: string;
+  attestationHash?: string; // backwards compat
   durationMs: number;
   error?: string;
 }

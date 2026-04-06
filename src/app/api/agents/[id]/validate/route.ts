@@ -106,10 +106,11 @@ export async function POST(
     updated_at: now,
   };
 
-  // If passed, mark agent verified
-  if (result.status === 'PASSED' && result.attestationHash) {
+  // If passed, mark agent verified with signature
+  if (result.status === 'PASSED' && result.signature) {
     agentUpdate.verified = true;
-    agentUpdate.attestation_hash = result.attestationHash;
+    agentUpdate.attestation_hash = result.contentHash;
+    agentUpdate.signature = result.signature;
     agentUpdate.verified_at = now;
   }
   const { error: agentUpdateError } = await adminDb.from('agents').update(agentUpdate).eq('id', agent.id);

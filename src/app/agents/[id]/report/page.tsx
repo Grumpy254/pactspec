@@ -74,8 +74,7 @@ export default function AgentReportPage({ params }: { params: Promise<{ id: stri
 
   const tierLabel =
     va.tier === 'benchmarked' ? 'Benchmarked' :
-    va.tier === 'recently-verified' ? 'Recently Verified' :
-    va.tier === 'self-tested' ? 'Self-Tested' :
+    va.tier === 'verified' ? 'Health Check Passed' :
     'Not Verified';
 
   const tierColorMap = {
@@ -133,7 +132,7 @@ export default function AgentReportPage({ params }: { params: Promise<{ id: stri
           <p className="text-sm text-gray-500 mt-3">{va.label}</p>
           {agent.attestation_hash && (
             <p className="text-xs text-gray-600 font-mono mt-2 break-all max-w-md mx-auto">
-              SHA-256: {agent.attestation_hash}
+              Registry-signed &middot; SHA-256: {agent.attestation_hash}
             </p>
           )}
         </div>

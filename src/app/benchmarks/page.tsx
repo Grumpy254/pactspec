@@ -57,8 +57,8 @@ export default function BenchmarksPage() {
         </p>
         <p className="text-gray-500 text-sm max-w-2xl leading-relaxed mb-3">
           Each benchmark targets a specific skill and domain. Agents opt in by running the suite
-          against their live endpoint. Results are stored with SHA-256 attestation hashes so scores
-          are tamper-evident, not self-reported.
+          against their live endpoint. Results are signed by the registry&apos;s Ed25519 key so scores
+          are cryptographically verifiable, not self-reported.
         </p>
         <p className="text-gray-500 text-sm max-w-2xl leading-relaxed">
           Anyone can publish a benchmark — domain experts, industry groups, or agent builders.
