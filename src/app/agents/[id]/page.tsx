@@ -198,6 +198,8 @@ function SkillPanel({ skill, agentId, pricingResult, driftInfo, latestCheck }: {
   );
 }
 
+const VERIFIABLE_DOMAINS = new Set(['schema-validation', 'api-response-quality']);
+
 interface BenchmarkResultRow {
   id: string;
   benchmark_id: string;
@@ -213,6 +215,7 @@ interface BenchmarkResultRow {
     publisher: string;
     version: string;
     test_count: number;
+    source?: string;
   };
 }
 
@@ -281,7 +284,14 @@ function BenchmarkResultsSection({ agentId }: { agentId: string }) {
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <h3 className="font-semibold text-white text-sm">{r.benchmarks.name}</h3>
-                  <span className="text-xs text-gray-500">{r.benchmarks.domain}</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-gray-500">{r.benchmarks.domain}</span>
+                    {r.benchmarks.source !== 'peer-reviewed' && r.benchmarks.source !== 'industry-standard' && !VERIFIABLE_DOMAINS.has(r.benchmarks.domain) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-400 border border-amber-800/40">
+                        unreviewed
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className={`text-2xl font-bold font-mono ${scoreColor(r.score)}`}>

@@ -16,6 +16,15 @@ interface BenchmarkRow {
   test_count: number;
   skill: string;
   created_at: string;
+  source?: string | null;
+  source_description?: string | null;
+  source_url?: string | null;
+}
+
+const VERIFIABLE_DOMAINS = new Set(['schema-validation', 'api-response-quality']);
+
+function isUnreviewed(b: BenchmarkRow): boolean {
+  return b.source !== 'peer-reviewed' && b.source !== 'industry-standard' && !VERIFIABLE_DOMAINS.has(b.domain);
 }
 
 interface LeaderboardEntry {
@@ -152,6 +161,33 @@ export default function BenchmarkDetailPage({ params }: { params: Promise<{ id: 
           <span>{new Date(benchmark.created_at).toLocaleDateString()}</span>
         </div>
       </div>
+
+      {/* Unreviewed warning */}
+      {isUnreviewed(benchmark) && (
+        <div className="bg-amber-950/30 border border-amber-900/40 rounded-xl p-5 mb-8">
+          <div className="flex items-start gap-3">
+            <span className="text-amber-400 text-lg shrink-0">!</span>
+            <div>
+              <p className="text-amber-400 font-semibold text-sm mb-1">Unreviewed benchmark</p>
+              <p className="text-sm text-amber-400/70 leading-relaxed">
+                The expected answers in this benchmark have not been validated by a domain expert.
+                {benchmark.source_description && (
+                  <> Source: {benchmark.source_description}</>
+                )}
+                {' '}Scores should be treated as directional, not authoritative. If you have domain expertise and can review the test cases,{' '}
+                <a
+                  href="https://github.com/Grumpy254/pactspec/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-300 underline"
+                >
+                  we welcome contributions
+                </a>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Run benchmark CTA */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-8">

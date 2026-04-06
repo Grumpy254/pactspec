@@ -20,6 +20,13 @@ interface BenchmarkRow {
   source_url?: string | null;
 }
 
+// Domains where expected answers can be objectively verified by anyone
+const VERIFIABLE_DOMAINS = new Set(['schema-validation', 'api-response-quality']);
+
+function needsExpertReview(b: BenchmarkRow): boolean {
+  return b.source !== 'peer-reviewed' && b.source !== 'industry-standard' && !VERIFIABLE_DOMAINS.has(b.domain);
+}
+
 export default function BenchmarksPage() {
   const [benchmarks, setBenchmarks] = useState<BenchmarkRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,19 +57,16 @@ export default function BenchmarksPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Benchmarks</h1>
         <p className="text-gray-400 max-w-2xl leading-relaxed mb-3">
-          An agent that &quot;responds with JSON&quot; is not the same as an agent that gets the right answer.
-          Benchmarks are independent test suites with known correct outputs, published by domain experts.
-          When an orchestrator needs to pick between five medical coding agents, benchmark scores
-          are how it decides.
+          Benchmarks are test suites with expected correct answers. The registry runs them
+          against live agent endpoints and signs the results. Scores are only as good as the
+          expected answers — which is why source provenance matters.
         </p>
         <p className="text-gray-500 text-sm max-w-2xl leading-relaxed mb-3">
-          Each benchmark targets a specific skill and domain. Agents opt in by running the suite
-          against their live endpoint. Results are signed by the registry&apos;s Ed25519 key so scores
-          are cryptographically verifiable, not self-reported.
-        </p>
-        <p className="text-gray-500 text-sm max-w-2xl leading-relaxed">
-          Anyone can publish a benchmark — domain experts, industry groups, or agent builders.
-          Orchestrators choose which ones they trust.
+          Benchmarks marked <span className="text-emerald-400">verified</span> have objectively
+          checkable answers (e.g., schema validation) or have been reviewed by domain experts.
+          Benchmarks marked <span className="text-amber-400">unreviewed</span> use synthetic test
+          data that has not been validated by a domain professional. Scores from unreviewed
+          benchmarks should be treated as directional, not authoritative.
         </p>
       </div>
 
@@ -122,19 +126,27 @@ export default function BenchmarksPage() {
                 <p className="text-sm text-gray-400 mb-3">{b.description}</p>
               )}
 
+              {needsExpertReview(b) && (
+                <div className="flex items-start gap-2 bg-amber-950/30 border border-amber-900/40 rounded-lg px-3 py-2 mb-3">
+                  <span className="text-amber-400 shrink-0 text-xs mt-0.5">!</span>
+                  <p className="text-xs text-amber-400/80 leading-relaxed">
+                    Unreviewed — expected answers have not been validated by a domain expert. Scores are directional, not authoritative.
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-3">
                   <span>
                     Published by <span className="text-gray-300">{b.publisher}</span>
                   </span>
-                  {b.source && (
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      b.source === 'peer-reviewed' ? 'bg-emerald-900/50 text-emerald-400' :
-                      b.source === 'industry-standard' ? 'bg-blue-900/50 text-blue-400' :
-                      b.source === 'community' ? 'bg-violet-900/50 text-violet-400' :
-                      'bg-gray-800 text-gray-500'
-                    }`}>
-                      {b.source}
+                  {needsExpertReview(b) ? (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-900/40 text-amber-400 border border-amber-800/40">
+                      unreviewed
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-900/50 text-emerald-400 border border-emerald-800/40">
+                      {b.source === 'peer-reviewed' ? 'peer-reviewed' : b.source === 'industry-standard' ? 'industry-standard' : 'verified'}
                     </span>
                   )}
                 </div>
