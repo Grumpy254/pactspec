@@ -6,8 +6,9 @@ branding:
 
 inputs:
   spec:
-    description: 'Path to the .pactspec.json file'
-    required: true
+    description: 'Path to .pactspec.json file. If omitted, auto-discovers all *.pactspec.json files.'
+    required: false
+    default: ''
   skill:
     description: 'Skill ID to run tests for. Omit to test all skills that have a testSuite.'
     required: false
@@ -20,8 +21,12 @@ inputs:
     description: 'Your agent identifier (X-Agent-ID header). Required when publish: true.'
     required: false
     default: ''
+  publisher-key:
+    description: 'Publisher API key (X-Publisher-Key header). Required to update existing agents.'
+    required: false
+    default: ''
   publish-token:
-    description: 'Publish token (X-Publish-Token header). Required when registry requires auth.'
+    description: 'Admin publish token (X-Publish-Token header). Alternative to publisher-key.'
     required: false
     default: ''
   registry:
@@ -35,7 +40,7 @@ inputs:
 
 outputs:
   valid:
-    description: 'Whether the spec passed schema validation (true/false)'
+    description: 'Whether the spec(s) passed schema validation (true/false)'
     value: ${{ steps.validate.outputs.valid }}
   published:
     description: 'Whether the spec was published to the registry (true/false)'
@@ -57,57 +62,83 @@ runs:
         CLI_VERSION: ${{ inputs.cli-version }}
       run: npm install -g "@pactspec/cli@${CLI_VERSION}"
 
-    - name: Validate spec
-      id: validate
+    - name: Discover spec files
+      id: discover
       shell: bash
       env:
         SPEC: ${{ inputs.spec }}
       run: |
-        if pactspec validate "$SPEC"; then
+        if [ -n "$SPEC" ]; then
+          echo "specs=$SPEC" >> "$GITHUB_OUTPUT"
+        else
+          FOUND=$(find . -name '*.pactspec.json' -not -path './node_modules/*' | tr '\n' ' ')
+          if [ -z "$FOUND" ]; then
+            echo "::error::No .pactspec.json files found. Specify one with the 'spec' input or add a .pactspec.json file."
+            exit 1
+          fi
+          echo "Auto-discovered: $FOUND"
+          echo "specs=$FOUND" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Validate spec(s)
+      id: validate
+      shell: bash
+      env:
+        SPECS: ${{ steps.discover.outputs.specs }}
+      run: |
+        FAILED=0
+        for SPEC in $SPECS; do
+          echo "Validating $SPEC"
+          pactspec validate "$SPEC" || FAILED=1
+        done
+        if [ $FAILED -eq 0 ]; then
           echo "valid=true" >> "$GITHUB_OUTPUT"
         else
           echo "valid=false" >> "$GITHUB_OUTPUT"
           exit 1
         fi
 
-    - name: Run test suite
+    - name: Run test suite(s)
       shell: bash
       env:
-        SPEC: ${{ inputs.spec }}
+        SPECS: ${{ steps.discover.outputs.specs }}
         SKILL: ${{ inputs.skill }}
       run: |
-        if [ -n "$SKILL" ]; then
-          pactspec test "$SPEC" --skill "$SKILL"
-        else
-          # Extract all skill IDs from the spec and run each
-          SKILLS=$(node -e "
-            const s = JSON.parse(require('fs').readFileSync(process.env.SPEC, 'utf8'));
-            const ids = s.skills
-              .filter(sk => sk.testSuite && sk.testSuite.url)
-              .map(sk => sk.id);
-            console.log(ids.join(' '));
-          " 2>/dev/null)
+        FAILED=0
+        for SPEC in $SPECS; do
+          if [ -n "$SKILL" ]; then
+            echo "Testing $SPEC skill: $SKILL"
+            pactspec test "$SPEC" --skill "$SKILL" || FAILED=1
+          else
+            SKILLS=$(node -e "
+              const s = JSON.parse(require('fs').readFileSync('$SPEC', 'utf8'));
+              const ids = s.skills
+                .filter(sk => sk.testSuite && sk.testSuite.url)
+                .map(sk => sk.id);
+              console.log(ids.join(' '));
+            " 2>/dev/null)
 
-          if [ -z "$SKILLS" ]; then
-            echo "No skills with testSuite.url found — skipping test run"
-            exit 0
+            if [ -z "$SKILLS" ]; then
+              echo "No skills with testSuite.url in $SPEC — skipping"
+              continue
+            fi
+
+            for SKILL_ID in $SKILLS; do
+              echo "Testing $SPEC skill: $SKILL_ID"
+              pactspec test "$SPEC" --skill "$SKILL_ID" || FAILED=1
+            done
           fi
-
-          FAILED=0
-          for SKILL_ID in $SKILLS; do
-            echo "Testing skill: $SKILL_ID"
-            pactspec test "$SPEC" --skill "$SKILL_ID" || FAILED=1
-          done
-          exit $FAILED
-        fi
+        done
+        exit $FAILED
 
     - name: Publish to registry
       id: publish
       if: inputs.publish == 'true'
       shell: bash
       env:
-        SPEC: ${{ inputs.spec }}
+        SPECS: ${{ steps.discover.outputs.specs }}
         AGENT_ID: ${{ inputs.agent-id }}
+        PUBLISHER_KEY: ${{ inputs.publisher-key }}
         PUBLISH_TOKEN: ${{ inputs.publish-token }}
         REGISTRY: ${{ inputs.registry }}
       run: |
@@ -116,13 +147,19 @@ runs:
           exit 1
         fi
 
-        ARGS=("$SPEC" --agent-id "$AGENT_ID" --registry "$REGISTRY")
-        if [ -n "$PUBLISH_TOKEN" ]; then ARGS+=(--publish-token "$PUBLISH_TOKEN"); fi
+        LAST_URL=""
+        for SPEC in $SPECS; do
+          ARGS=("$SPEC" --agent-id "$AGENT_ID" --registry "$REGISTRY")
+          if [ -n "$PUBLISHER_KEY" ]; then ARGS+=(--publisher-key "$PUBLISHER_KEY"); fi
+          if [ -n "$PUBLISH_TOKEN" ]; then ARGS+=(--publish-token "$PUBLISH_TOKEN"); fi
 
-        OUTPUT=$(pactspec publish "${ARGS[@]}" 2>&1)
-        echo "$OUTPUT"
+          echo "Publishing $SPEC"
+          OUTPUT=$(pactspec publish "${ARGS[@]}" 2>&1)
+          echo "$OUTPUT"
 
-        # Extract registry URL from CLI output
-        URL=$(echo "$OUTPUT" | grep -oE 'https://[^ ]+/agents/[^ ]+' | head -1)
+          URL=$(echo "$OUTPUT" | grep -oE 'https://[^ ]+/agents/[^ ]+' | head -1)
+          if [ -n "$URL" ]; then LAST_URL="$URL"; fi
+        done
+
         echo "published=true" >> "$GITHUB_OUTPUT"
-        echo "agent-url=$URL" >> "$GITHUB_OUTPUT"
+        echo "agent-url=$LAST_URL" >> "$GITHUB_OUTPUT"

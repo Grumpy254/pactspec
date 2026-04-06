@@ -724,6 +724,48 @@ program
   });
 
 program
+  .command('badge <spec-file>')
+  .description('Generate a README badge for your agent')
+  .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
+  .action(async (specFile: string, opts: { registry: string }) => {
+    let spec: Record<string, unknown>;
+    try {
+      spec = parseSourceFile(specFile);
+    } catch {
+      console.error(pc.red(`✗ Could not read or parse ${specFile}`));
+      process.exit(1);
+    }
+
+    const specId = spec.id;
+    if (typeof specId !== 'string' || !specId) {
+      console.error(pc.red('✗ Spec file is missing an "id" field'));
+      process.exit(1);
+    }
+
+    const encoded = encodeURIComponent(specId);
+    const registry = opts.registry.replace(/\/+$/, '');
+    const badge = `[![PactSpec](${registry}/api/badge/${encoded})](${registry}/agents/${encoded})`;
+
+    console.log(pc.green('✓ Badge markdown:\n'));
+    console.log(badge);
+    console.log(pc.dim('\nPaste this into your README.md'));
+
+    // Try to copy to clipboard silently
+    try {
+      const { execSync } = await import('child_process');
+      const platform = process.platform;
+      if (platform === 'darwin') {
+        execSync('pbcopy', { input: badge });
+      } else {
+        execSync('xclip -selection clipboard', { input: badge });
+      }
+      console.log(pc.dim('(Copied to clipboard)'));
+    } catch {
+      // Clipboard not available — skip silently
+    }
+  });
+
+program
   .command('test <file>')
   .description('Run a skill\'s test suite locally against the agent endpoint')
   .option('-s, --skill <id>', 'Skill ID to test (defaults to first skill with a testSuite)')

@@ -32,19 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/spec" className="hover:text-white transition-colors duration-200">Spec</a>
             <a href="/" className="hover:text-white transition-colors duration-200">Registry</a>
             <a href="/publish" className="hover:text-white transition-colors duration-200">Publish</a>
-            <div className="relative group">
-              <span className="hover:text-white transition-colors duration-200 cursor-default">Docs</span>
-              <div className="absolute top-full right-0 mt-2 w-52 bg-[#111117] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-1">
-                <a href="/why" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Why PactSpec</a>
-                <a href="/spec" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">The Spec</a>
-                <a href="/pricing" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Pricing &amp; Monetization</a>
-                <a href="/benchmarks" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Benchmarks</a>
-                <a href="/guides/stripe-setup" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">Stripe Setup Guide</a>
-                <a href="/openclaw" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors">OpenClaw Skills</a>
-                <div className="border-t border-white/[0.06] my-1" />
-                <a href="/api/spec/v1" target="_blank" rel="noopener noreferrer" className="block px-4 py-2.5 text-sm hover:bg-white/[0.04] hover:text-white transition-colors text-gray-500">Schema (JSON)</a>
-              </div>
-            </div>
+            <a href="/benchmarks" className="hover:text-white transition-colors duration-200">Benchmarks</a>
             <a href="/demo" className="hover:text-white transition-colors duration-200">Demo</a>
             <a
               href="https://github.com/Grumpy254/pactspec"
