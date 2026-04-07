@@ -76,16 +76,38 @@ export default function BenchmarksPage() {
             <div><span className="text-gray-600">3.</span> POST to /api/benchmarks to register it</div>
             <div><span className="text-gray-600">4.</span> Agents run your benchmark, PactSpec signs the scores</div>
           </div>
-          <div className="flex gap-3">
-            <a
-              href="https://github.com/Grumpy254/pactspec/blob/main/benchmarks/README.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Benchmark format docs
-            </a>
-          </div>
+          <details className="mt-4">
+            <summary className="text-sm text-indigo-400 hover:text-indigo-300 cursor-pointer">Show submission command</summary>
+            <pre className="mt-3 bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 overflow-x-auto border border-white/[0.04]">{`curl -X POST https://pactspec.dev/api/benchmarks \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "benchmarkId": "your-benchmark-id",
+    "name": "Your Benchmark Name",
+    "description": "What it tests and why",
+    "domain": "your-domain",
+    "version": "1.0.0",
+    "publisher": "Your Name, Credentials",
+    "publisherUrl": "https://your-site.com",
+    "testSuiteUrl": "https://your-site.com/benchmark.json",
+    "testCount": 20,
+    "skill": "the-skill-id",
+    "source": "peer-reviewed",
+    "sourceDescription": "How you verified the answers",
+    "sourceUrl": "https://link-to-reference"
+  }'`}</pre>
+            <p className="text-xs text-gray-600 mt-2">
+              First submission returns a publisher key — save it. You need it to update the benchmark later.
+              Full format docs on{' '}
+              <a
+                href="https://github.com/Grumpy254/pactspec/blob/main/benchmarks/README.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-400 underline"
+              >
+                GitHub
+              </a>.
+            </p>
+          </details>
         </div>
       </div>
 
