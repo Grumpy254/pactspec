@@ -89,6 +89,84 @@ export default function BenchmarksPage() {
         </div>
       </div>
 
+      {/* Authoritative sources by domain */}
+      <div className="mb-12">
+        <h2 className="text-xl font-semibold text-white mb-2">Benchmarks needed</h2>
+        <p className="text-sm text-gray-500 mb-5">
+          These domains have authoritative reference sources that benchmarks should be built against. If you have expertise in any of these areas, the source material is public.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div className="text-sm font-semibold text-white mb-1">Medical Coding</div>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              Map clinical text to diagnosis codes. Expected answers verifiable against the official classification.
+            </p>
+            <div className="space-y-1.5">
+              <a href="https://icd.who.int/browse/2024-01/mms/en" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">WHO ICD-11 Browser (2024-01 release)</a>
+              <a href="https://www.who.int/standards/classifications/classification-of-diseases" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">WHO ICD Classification Standards</a>
+            </div>
+            <p className="text-[10px] text-gray-600 mt-2">Needs: certified medical coder (CPC, CCS, or equivalent)</p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div className="text-sm font-semibold text-white mb-1">Security Vulnerability Detection</div>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              Classify vulnerabilities by type and severity. Reference frameworks are public and well-documented.
+            </p>
+            <div className="space-y-1.5">
+              <a href="https://attack.mitre.org/" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">MITRE ATT&amp;CK Framework</a>
+              <a href="https://nvd.nist.gov/" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">NIST National Vulnerability Database</a>
+              <a href="https://owasp.org/www-project-top-ten/" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">OWASP Top 10</a>
+            </div>
+            <p className="text-[10px] text-gray-600 mt-2">Needs: security engineer or penetration tester</p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div className="text-sm font-semibold text-white mb-1">Medical Lab Tests</div>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              Map lab orders and results to standardized codes. LOINC is the universal standard for lab observations.
+            </p>
+            <div className="space-y-1.5">
+              <a href="https://loinc.org/" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">LOINC (Logical Observation Identifiers)</a>
+              <a href="https://loinc.org/search/" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">LOINC Search</a>
+            </div>
+            <p className="text-[10px] text-gray-600 mt-2">Needs: clinical laboratory professional or informaticist</p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div className="text-sm font-semibold text-white mb-1">Drug Interactions</div>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              Identify dangerous drug combinations. Reference databases are used in clinical practice daily.
+            </p>
+            <div className="space-y-1.5">
+              <a href="https://www.drugbank.com/" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">DrugBank</a>
+              <a href="https://dailymed.nlm.nih.gov/dailymed/" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">DailyMed (FDA/NLM)</a>
+            </div>
+            <p className="text-[10px] text-gray-600 mt-2">Needs: pharmacist or clinical pharmacologist</p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div className="text-sm font-semibold text-white mb-1">Legal Contract Analysis</div>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              Identify clause types, risks, and obligations in contracts. No single authoritative database, but common patterns are well-established.
+            </p>
+            <p className="text-[10px] text-gray-600 mt-2">Needs: lawyer or legal operations professional</p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div className="text-sm font-semibold text-white mb-1">Financial Compliance</div>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              Flag regulatory issues in financial documents. Public regulations provide the ground truth.
+            </p>
+            <div className="space-y-1.5">
+              <a href="https://www.sec.gov/rules" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">SEC Rules &amp; Regulations</a>
+              <a href="https://www.fatf-gafi.org/en/recommendations.html" target="_blank" rel="noopener noreferrer" className="block text-xs text-indigo-400 hover:text-indigo-300">FATF Anti-Money Laundering Standards</a>
+            </div>
+            <p className="text-[10px] text-gray-600 mt-2">Needs: compliance officer or financial regulatory professional</p>
+          </div>
+        </div>
+      </div>
+
       {/* Published benchmarks */}
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-white">Published benchmarks</h2>
