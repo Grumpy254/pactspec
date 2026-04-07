@@ -12,7 +12,7 @@ requires-python = ">=3.9"
 authors = [
     { name = "PactSpec Contributors", email = "hello@pactspec.dev" },
 ]
-keywords = ["pactspec", "ai-agents", "sdk", "registry", "attestation", "agent-spec"]
+keywords = ["pactspec", "ai-agents", "sdk", "registry", "signatures", "agent-spec"]
 dependencies = [
     "jsonschema>=4.0.0",
     "httpx>=0.24.0",

@@ -34,7 +34,7 @@ These are PactSpec-only and must be added manually:
 |----------------|-------|
 | `skills[].pricing` | No OpenAPI equivalent - add via `x-pricing` extension first |
 | `skills[].testSuite` | No OpenAPI equivalent |
-| `attestations` | Registry-managed |
+| `signatures` | Registry-managed (Ed25519 signed results) |
 
 ---
 

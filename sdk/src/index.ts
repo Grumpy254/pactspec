@@ -53,6 +53,7 @@ export interface AgentRecord {
   spec: PactSpec;
   tags: string[];
   verified: boolean;
+  signature: string | null;
   attestationHash: string | null;
   verifiedAt: string | null;
   publishedAt: string;
@@ -153,7 +154,7 @@ export interface VerifyOptions {
 export interface VerifyResult {
   runId: string;
   status: 'PASSED' | 'FAILED' | 'ERROR';
-  attestationHash?: string;
+  signature?: string;
   results: TestResult[];
   durationMs: number;
   error?: string;
@@ -214,6 +215,7 @@ export async function getAgent(
     spec: a.spec as PactSpec,
     tags: a.tags as string[],
     verified: a.verified as boolean,
+    signature: (a.signature ?? a.attestation_hash) as string | null,
     attestationHash: a.attestation_hash as string | null,
     verifiedAt: a.verified_at as string | null,
     publishedAt: a.published_at as string,
@@ -268,6 +270,7 @@ export async function search(options?: SearchOptions): Promise<SearchResult> {
     spec: a.spec as PactSpec,
     tags: a.tags as string[],
     verified: a.verified as boolean,
+    signature: (a.signature ?? a.attestation_hash) as string | null,
     attestationHash: a.attestation_hash as string | null,
     verifiedAt: a.verified_at as string | null,
     publishedAt: a.published_at as string,

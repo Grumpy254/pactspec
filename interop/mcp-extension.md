@@ -28,7 +28,7 @@ reference can be embedded in any MCP server's tool definitions:
     "registry": "https://pactspec.dev/api/agents/urn:pactspec:acme:invoice-processor",
     "skill": "extract-line-items",
     "verified": true,
-    "attestationRecord": "https://pactspec.dev/api/agents/urn:pactspec:acme:invoice-processor"
+    "verificationUrl": "https://pactspec.dev/api/agents/urn:pactspec:acme:invoice-processor"
   }
 }
 ```

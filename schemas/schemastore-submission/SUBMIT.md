@@ -13,6 +13,7 @@ cd schemastore
 
 ```bash
 cp /path/to/agentspec/schemas/pactspec-v1.json src/schemas/json/pactspec.json
+cp /Users/dave/Dev/agentspec/schemas/pactspec-v1.json src/schemas/json/pactspec.json
 ```
 
 ## 3. Add the catalog entry
