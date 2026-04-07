@@ -105,12 +105,9 @@ jobs:
 
 ## Benchmarks
 
-2 verified benchmark suites with objectively correct answers:
+PactSpec runs benchmarks — domain experts write them.
 
-- API Response Quality (10 tests)
-- JSON Schema Validation (10 tests)
-
-5 additional domain-specific benchmarks (medical, legal, security, data extraction, summarization) are in `benchmarks/unreviewed/` — their expected answers have not been validated by domain experts. We moved them after finding incorrect ICD-11 codes. Contributions from domain professionals welcome.
+A benchmark is a JSON file with test cases and expected correct answers, published by someone with expertise in that domain. PactSpec runs the tests against live agent endpoints and signs the results. See [`benchmarks/README.md`](benchmarks/README.md) for the format and how to publish one.
 
 ## API
 

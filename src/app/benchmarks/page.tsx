@@ -20,11 +20,8 @@ interface BenchmarkRow {
   source_url?: string | null;
 }
 
-// Domains where expected answers can be objectively verified by anyone
-const VERIFIABLE_DOMAINS = new Set(['schema-validation', 'api-response-quality']);
-
-function needsExpertReview(b: BenchmarkRow): boolean {
-  return b.source !== 'peer-reviewed' && b.source !== 'industry-standard' && !VERIFIABLE_DOMAINS.has(b.domain);
+function isReviewed(b: BenchmarkRow): boolean {
+  return b.source === 'peer-reviewed' || b.source === 'industry-standard';
 }
 
 export default function BenchmarksPage() {
@@ -42,7 +39,6 @@ export default function BenchmarksPage() {
       .then((d) => {
         const items = d.benchmarks ?? [];
         setBenchmarks(items);
-        // Build domain list from all benchmarks (first load)
         if (!domain && items.length > 0) {
           const unique = [...new Set(items.map((b: BenchmarkRow) => b.domain))] as string[];
           setDomains(unique.sort());
@@ -54,20 +50,49 @@ export default function BenchmarksPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      {/* Header — positions PactSpec as infrastructure, not author */}
+      <div className="mb-12">
         <h1 className="text-3xl font-bold text-white mb-2">Benchmarks</h1>
-        <p className="text-gray-400 max-w-2xl leading-relaxed mb-3">
-          Benchmarks are test suites with expected correct answers. The registry runs them
-          against live agent endpoints and signs the results. Scores are only as good as the
-          expected answers — which is why source provenance matters.
+        <p className="text-gray-400 max-w-2xl leading-relaxed mb-6">
+          PactSpec runs benchmarks. Domain experts write them.
         </p>
-        <p className="text-gray-500 text-sm max-w-2xl leading-relaxed mb-3">
-          Benchmarks marked <span className="text-emerald-400">verified</span> have objectively
-          checkable answers (e.g., schema validation) or have been reviewed by domain experts.
-          Benchmarks marked <span className="text-amber-400">unreviewed</span> use synthetic test
-          data that has not been validated by a domain professional. Scores from unreviewed
-          benchmarks should be treated as directional, not authoritative.
+        <p className="text-gray-500 text-sm max-w-2xl leading-relaxed mb-6">
+          A benchmark is a set of test cases with expected correct answers, published by someone
+          with domain expertise. PactSpec runs the tests against live agent endpoints and signs
+          the results. The score is only as good as the expert who wrote the expected answers.
         </p>
+
+        {/* Publish CTA */}
+        <div className="bg-[#111117] border border-white/[0.06] rounded-2xl p-7 max-w-2xl">
+          <h2 className="text-white font-semibold text-lg mb-2">Publish a benchmark</h2>
+          <p className="text-gray-400 text-sm leading-relaxed mb-4">
+            If you&apos;re a domain expert — a medical coder, security engineer, lawyer, data scientist —
+            you can publish a benchmark that holds AI agents accountable in your field.
+            Your name stays on it. You control the expected answers.
+          </p>
+          <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 space-y-1 mb-4 border border-white/[0.04]">
+            <div><span className="text-gray-600">1.</span> Write a benchmark JSON file with test cases</div>
+            <div><span className="text-gray-600">2.</span> Host it at any URL you control</div>
+            <div><span className="text-gray-600">3.</span> POST to /api/benchmarks to register it</div>
+            <div><span className="text-gray-600">4.</span> Agents run your benchmark, PactSpec signs the scores</div>
+          </div>
+          <div className="flex gap-3">
+            <a
+              href="https://github.com/Grumpy254/pactspec/blob/main/benchmarks/README.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              Benchmark format docs
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Published benchmarks */}
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-white">Published benchmarks</h2>
+        <p className="text-sm text-gray-500 mt-1">Community-published test suites with known correct answers</p>
       </div>
 
       {/* Domain filter */}
@@ -90,9 +115,10 @@ export default function BenchmarksPage() {
         <div className="text-center text-gray-500 py-20">Loading benchmarks...</div>
       ) : benchmarks.length === 0 ? (
         <div className="text-center text-gray-500 py-20">
-          <p className="mb-2">No benchmarks published yet</p>
-          <p className="text-sm text-gray-600">
-            Publish a benchmark via the API: POST /api/benchmarks
+          <p className="mb-3">No benchmarks published yet.</p>
+          <p className="text-sm text-gray-600 max-w-md mx-auto">
+            Be the first. If you have domain expertise and opinions about what &quot;correct&quot; looks like,
+            your benchmark gives every AI agent in that space something to be measured against.
           </p>
         </div>
       ) : (
@@ -126,11 +152,11 @@ export default function BenchmarksPage() {
                 <p className="text-sm text-gray-400 mb-3">{b.description}</p>
               )}
 
-              {needsExpertReview(b) && (
+              {!isReviewed(b) && (
                 <div className="flex items-start gap-2 bg-amber-950/30 border border-amber-900/40 rounded-lg px-3 py-2 mb-3">
                   <span className="text-amber-400 shrink-0 text-xs mt-0.5">!</span>
                   <p className="text-xs text-amber-400/80 leading-relaxed">
-                    Unreviewed — expected answers have not been validated by a domain expert. Scores are directional, not authoritative.
+                    Not peer-reviewed — expected answers have not been validated by a credentialed domain expert.
                   </p>
                 </div>
               )}
@@ -138,15 +164,15 @@ export default function BenchmarksPage() {
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-3">
                   <span>
-                    Published by <span className="text-gray-300">{b.publisher}</span>
+                    by <span className="text-gray-300">{b.publisher}</span>
                   </span>
-                  {needsExpertReview(b) ? (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-900/40 text-amber-400 border border-amber-800/40">
-                      unreviewed
+                  {isReviewed(b) ? (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-900/50 text-emerald-400 border border-emerald-800/40">
+                      {b.source}
                     </span>
                   ) : (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-900/50 text-emerald-400 border border-emerald-800/40">
-                      {b.source === 'peer-reviewed' ? 'peer-reviewed' : b.source === 'industry-standard' ? 'industry-standard' : 'verified'}
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-500 border border-gray-700">
+                      {b.source ?? 'unreviewed'}
                     </span>
                   )}
                 </div>

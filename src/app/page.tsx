@@ -288,10 +288,6 @@ export default function RegistryPage() {
             <div className="text-3xl font-bold text-white">{agents.filter(a => (a.spec?.skills ?? []).some(s => s.pricing && s.pricing.model !== 'free')).length}</div>
             <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">priced</div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-white">2</div>
-            <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">benchmarks</div>
-          </div>
         </div>
       )}
 
@@ -315,8 +311,8 @@ export default function RegistryPage() {
             Self-tests prove it runs. Benchmarks prove it&apos;s accurate. The registry runs both directly against the live endpoint &mdash; no self-reported metrics.
           </p>
           <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 space-y-2 border border-white/[0.04]">
-            <div><span className="text-gray-500">Self-tested:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
-            <div><span className="text-gray-500">Benchmark:</span> <span className="text-emerald-400">94.7%</span> <span className="text-gray-600">medical-coding</span></div>
+            <div><span className="text-gray-500">Health check:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
+            <div><span className="text-gray-500">Benchmark:</span> <span className="text-emerald-400">92.0%</span> <span className="text-gray-600">by Jane Smith, CPC</span></div>
             <div><span className="text-gray-500">Signed:</span> <span className="text-gray-500">ed25519:a4f2...</span></div>
           </div>
         </div>
