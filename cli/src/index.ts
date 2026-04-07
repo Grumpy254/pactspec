@@ -27,7 +27,7 @@ const program = new Command();
 
 program
   .name('pactspec')
-  .description('Official CLI for the PactSpec protocol')
+  .description('CLI for the PactSpec spec — validate, test, and publish AI agent specs')
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   .version((require('../package.json') as { version: string }).version);
 
@@ -84,8 +84,9 @@ program
   .description('Publish a PactSpec JSON file to the registry')
   .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
   .option('-k, --agent-id <id>', 'Your agent identifier (X-Agent-ID header)')
-  .option('-t, --publish-token <token>', 'Publish token (X-Publish-Token header)')
-  .action(async (file: string, opts: { registry: string; agentId?: string; publishToken?: string }) => {
+  .option('-p, --publisher-key <key>', 'Publisher API key (X-Publisher-Key header)')
+  .option('-t, --publish-token <token>', 'Admin publish token (X-Publish-Token header)')
+  .action(async (file: string, opts: { registry: string; agentId?: string; publisherKey?: string; publishToken?: string }) => {
     let spec: unknown;
     try {
       spec = parseSourceFile(file);
@@ -107,6 +108,7 @@ program
         'Content-Type': 'application/json',
         'X-Agent-ID': opts.agentId,
       };
+      if (opts.publisherKey) headers['X-Publisher-Key'] = opts.publisherKey;
       if (opts.publishToken) headers['X-Publish-Token'] = opts.publishToken;
       res = await fetch(`${opts.registry}/api/agents`, {
         method: 'POST',
@@ -120,13 +122,22 @@ program
     }
 
     const text = await res.text();
-    let data: { agent?: { id: string; spec_id?: string }; error?: string; errors?: string[] } = {};
+    let data: { agent?: { id: string; spec_id?: string }; publisherKey?: string; message?: string; error?: string; errors?: string[] } = {};
     try { data = JSON.parse(text); } catch { /* non-JSON response */ }
 
     if (res.ok && data.agent) {
       const displayId = data.agent.spec_id ?? data.agent.id;
       console.log(pc.green(`✓ Published: ${displayId}`));
       console.log(pc.dim(`  ${opts.registry}/agents/${data.agent.id}`));
+
+      // First-time publish — show the publisher key
+      if (data.publisherKey) {
+        console.log('');
+        console.log(pc.yellow(pc.bold('  ⚠ SAVE YOUR PUBLISHER KEY — it is shown only once:')));
+        console.log(pc.bold(`  ${data.publisherKey}`));
+        console.log(pc.dim('  You need this key to update or republish this agent.'));
+        console.log(pc.dim('  Pass it with: pactspec publish agent.json --publisher-key <key>'));
+      }
     } else {
       console.error(pc.red(`✗ Publish failed: ${data.error ?? 'Unknown error'}`));
       if (data.errors) {
@@ -165,13 +176,15 @@ program
   .description('Publish all *.pactspec.json / *.pactspec.yaml files in a directory')
   .option('-r, --recursive', 'Search subdirectories recursively')
   .option('-k, --agent-id <id>', 'Your agent identifier (X-Agent-ID header)')
-  .option('-t, --publish-token <token>', 'Publish token (X-Publish-Token header)')
+  .option('-p, --publisher-key <key>', 'Publisher API key (X-Publisher-Key header)')
+  .option('-t, --publish-token <token>', 'Admin publish token (X-Publish-Token header)')
   .option('--registry <url>', 'Registry URL', 'https://pactspec.dev')
   .option('--dry-run', 'Validate all specs but do not publish')
   .option('--continue-on-error', 'Do not stop on first failure')
   .action(async (dir: string, opts: {
     recursive?: boolean;
     agentId?: string;
+    publisherKey?: string;
     publishToken?: string;
     registry: string;
     dryRun?: boolean;
@@ -253,6 +266,7 @@ program
           'Content-Type': 'application/json',
           'X-Agent-ID': opts.agentId,
         };
+        if (opts.publisherKey) headers['X-Publisher-Key'] = opts.publisherKey;
         if (opts.publishToken) headers['X-Publish-Token'] = opts.publishToken;
 
         const res = await fetch(`${opts.registry}/api/agents`, {
@@ -324,6 +338,8 @@ program
 
     let data: {
       status: string;
+      signature?: string;
+      contentHash?: string;
       attestationHash?: string;
       error?: string;
       results?: Array<{ testId: string; passed: boolean; durationMs: number; error?: string }>;
@@ -337,7 +353,8 @@ program
 
     if (data.status === 'PASSED') {
       console.log(pc.green(`✓ Validation PASSED`));
-      console.log(pc.dim(`  Attestation: ${data.attestationHash}`));
+      if (data.signature) console.log(pc.dim(`  Signature: ${data.signature.slice(0, 32)}...`));
+      else if (data.attestationHash) console.log(pc.dim(`  Hash: ${data.attestationHash}`));
     } else {
       console.error(pc.red(`✗ Validation ${data.status}`));
       if (data.error) console.error(pc.red(`  ${data.error}`));
@@ -365,7 +382,8 @@ program
   .option('-p, --protocol <p>', 'Payment protocol: stripe, x402, none')
   .option('--publish', 'Publish updated spec to registry after updating')
   .option('-k, --agent-id <id>', 'Your agent identifier (for --publish)')
-  .option('-t, --publish-token <token>', 'Publish token (for --publish)')
+  .option('--publisher-key <key>', 'Publisher API key (for --publish)')
+  .option('-t, --publish-token <token>', 'Admin publish token (for --publish)')
   .option('-r, --registry <url>', 'Registry URL', 'https://pactspec.dev')
   .action(async (file: string, opts: {
     skill: string;
@@ -375,6 +393,7 @@ program
     protocol?: string;
     publish?: boolean;
     agentId?: string;
+    publisherKey?: string;
     publishToken?: string;
     registry: string;
   }) => {
@@ -483,6 +502,7 @@ program
           'Content-Type': 'application/json',
           'X-Agent-ID': opts.agentId,
         };
+        if (opts.publisherKey) headers['X-Publisher-Key'] = opts.publisherKey;
         if (opts.publishToken) headers['X-Publish-Token'] = opts.publishToken;
         res = await fetch(`${opts.registry}/api/agents`, {
           method: 'POST',
@@ -495,11 +515,16 @@ program
         process.exit(1);
       }
       const text = await res.text();
-      let data: { agent?: { id: string; spec_id?: string }; error?: string; errors?: string[] } = {};
+      let data: { agent?: { id: string; spec_id?: string }; publisherKey?: string; error?: string; errors?: string[] } = {};
       try { data = JSON.parse(text); } catch { /* non-JSON */ }
       if (res.ok && data.agent) {
         const displayId = data.agent.spec_id ?? data.agent.id;
         console.log(pc.green(`✓ Published: ${displayId}`));
+        if (data.publisherKey) {
+          console.log('');
+          console.log(pc.yellow(pc.bold('  ⚠ SAVE YOUR PUBLISHER KEY — it is shown only once:')));
+          console.log(pc.bold(`  ${data.publisherKey}`));
+        }
         console.log(pc.dim(`  ${opts.registry}/agents/${data.agent.id}`));
       } else {
         console.error(pc.red(`✗ Publish failed: ${data.error ?? 'Unknown error'}`));
