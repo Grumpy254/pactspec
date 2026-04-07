@@ -62,17 +62,12 @@ Verification expires after 7 days. Stale badges turn yellow, then red.
 
 ## Benchmarks
 
-7 benchmark suites with known correct answers:
+2 verified benchmark suites with objectively correct answers:
 
-- ICD-11 Medical Coding (20 tests)
-- Security Vulnerability Scanning (15 tests)
-- Legal Contract Review (15 tests)
-- Data Extraction (15 tests)
 - API Response Quality (10 tests)
-- Text Summarization (5 tests)
 - JSON Schema Validation (10 tests)
 
-All benchmarks are synthetic (real classification codes, synthetic scenarios) and labeled as such.
+5 additional domain-specific benchmarks (medical, legal, security, data extraction, summarization) are available in `benchmarks/unreviewed/` but their expected answers have not been validated by domain experts. We moved them out of the main directory after finding errors in the ICD-11 codes. Contributions from domain professionals welcome.
 
 ## API
 
