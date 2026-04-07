@@ -188,7 +188,7 @@ function SkillPanel({ skill, agentId, pricingResult, driftInfo, latestCheck }: {
           </p>
           {result.attestationHash && (
             <p className="text-xs font-mono text-emerald-500 break-all">
-              Verified record: {result.attestationHash}
+              Signed: {result.attestationHash}
             </p>
           )}
           {result.error && <p className="text-xs">{result.error}</p>}

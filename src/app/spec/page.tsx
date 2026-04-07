@@ -297,7 +297,7 @@ pactspec publish agent.json --registry https://registry.internal.acme.dev`} />
               {[
                 ['Skill-level I/O schemas', '\u2713', '\u2713 input only', '\u2713 input + output'],
                 ['Pricing', '\u2717', '\u2717', '\u2713 model + amount + protocol'],
-                ['Test suites', '\u2717', '\u2717', '\u2713 HTTP roundtrip + benchmarks'],
+                ['Test suites', '\u2717', '\u2717', '\u2713 HTTP roundtrip tests'],
                 ['Verified records', '\u2717', '\u2717', '\u2713 Ed25519 signed results'],
                 ['Public registry', '~ commercial', '\u2717', '\u2713 open'],
                 ['Payment handling', '\u2717', '\u2717', '\u2713 x402 + Stripe'],
@@ -350,7 +350,7 @@ pactspec publish agent.json --registry https://registry.internal.acme.dev`} />
           <div className="bg-gray-900 border border-emerald-900/50 rounded-xl p-5">
             <div className="text-emerald-400 text-sm font-semibold mb-2">Verification is registry-run</div>
             <p className="text-sm text-gray-400 leading-relaxed">
-              Self-tests and benchmarks are executed by the registry directly against the live endpoint. No self-reported metrics. Every result is reproducible &mdash; run <code className="text-gray-300">pactspec test</code> yourself and get the same score.
+              Health checks and benchmarks are executed by the registry directly against the live endpoint. No self-reported metrics. Benchmarks are authored by domain experts, not PactSpec. Every result is reproducible &mdash; run <code className="text-gray-300">pactspec test</code> yourself and get the same score.
             </p>
           </div>
         </div>
@@ -369,7 +369,7 @@ pactspec publish agent.json --registry https://registry.internal.acme.dev`} />
             <p className="text-white font-semibold text-sm mb-2">Why trust it?</p>
             <p className="text-gray-400 text-sm leading-relaxed">
               Every result is reproducible. Run <code className="text-gray-300 bg-gray-800 px-1 rounded text-xs">pactspec test</code> yourself.
-              Results are stored as Ed25519 signed results records. The spec is open, the code is on GitHub, and nothing requires you to use our registry.
+              Results are signed with Ed25519 — verify with the public key at <code className="text-gray-300 bg-gray-800 px-1 rounded text-xs">/api/registry-key</code>. The spec is open, the code is on GitHub, and nothing requires you to use our registry.
             </p>
           </div>
         </div>

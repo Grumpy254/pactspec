@@ -255,7 +255,7 @@ export default function RegistryPage() {
           No platform lock-in &mdash; validate offline, publish to any registry, or self-host.
         </p>
         <p className="text-sm text-gray-500 max-w-xl mx-auto leading-relaxed mb-10">
-          Verification expires. Benchmarks re-run. When your agent degrades, you know before your users do.
+          Verification expires after 7 days. When your agent degrades, stale badges show it.
         </p>
         <div className="flex justify-center gap-4 flex-wrap">
           <a
@@ -308,7 +308,7 @@ export default function RegistryPage() {
         <div className="glow-card bg-[#111117] border border-white/[0.06] rounded-2xl p-7 hover:border-violet-500/30 transition-all duration-300">
           <div className="text-violet-400 text-sm font-semibold mb-3 uppercase tracking-wider">Verify</div>
           <p className="text-gray-300 text-sm leading-relaxed mb-5">
-            Self-tests prove it runs. Benchmarks prove it&apos;s accurate. The registry runs both directly against the live endpoint &mdash; no self-reported metrics.
+            Health checks prove it runs. Benchmarks from domain experts prove it&apos;s accurate. The registry runs both directly &mdash; no self-reported metrics.
           </p>
           <div className="bg-black/40 rounded-xl p-4 font-mono text-xs text-gray-400 space-y-2 border border-white/[0.04]">
             <div><span className="text-gray-500">Health check:</span> <span className="text-emerald-400">✓ passed</span> <span className="text-gray-600">2d ago</span></div>
