@@ -1,0 +1,6 @@
+{
+  "name": "PactSpec",
+  "description": "AI agent capability declaration (pactspec.dev)",
+  "fileMatch": ["*.pactspec.json", "*.pactspec.yaml"],
+  "url": "https://json.schemastore.org/pactspec.json"
+}
