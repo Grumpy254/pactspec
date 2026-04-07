@@ -317,8 +317,9 @@ function BenchmarkResultsSection({ agentId }: { agentId: string }) {
               </div>
 
               <div className="flex items-center justify-between text-xs text-gray-400">
-                <span>
+                <span className="flex items-center gap-2">
                   {r.passed_count}/{r.total_count} tests passed
+                  <span className="text-gray-600">by {r.benchmarks.publisher}</span>
                 </span>
                 <span>by {r.benchmarks.publisher}</span>
               </div>

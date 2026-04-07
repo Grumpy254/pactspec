@@ -161,10 +161,21 @@ export default function BenchmarksPage() {
                 </div>
               )}
 
+              {b.source_description && (
+                <p className="text-xs text-gray-500 mb-3 leading-relaxed">{b.source_description}</p>
+              )}
+
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-3">
                   <span>
-                    by <span className="text-gray-300">{b.publisher}</span>
+                    by{' '}
+                    {b.publisher_url ? (
+                      <a href={b.publisher_url} target="_blank" rel="noopener noreferrer" className="text-gray-300 underline" onClick={(e) => e.stopPropagation()}>
+                        {b.publisher}
+                      </a>
+                    ) : (
+                      <span className="text-gray-300">{b.publisher}</span>
+                    )}
                   </span>
                   {isReviewed(b) ? (
                     <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-900/50 text-emerald-400 border border-emerald-800/40">
