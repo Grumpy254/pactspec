@@ -56,3 +56,4 @@ supabase/
 .claude/
 scripts/
 integrations/*/dist/
+cli/.next/
