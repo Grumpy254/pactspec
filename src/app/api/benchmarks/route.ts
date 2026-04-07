@@ -59,6 +59,9 @@ export async function POST(req: NextRequest) {
     testSuiteUrl?: string;
     testCount?: number;
     skill?: string;
+    source?: string;
+    sourceDescription?: string;
+    sourceUrl?: string;
   };
 
   try {
@@ -89,6 +92,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'testSuiteUrl must be a valid HTTP(S) URL' }, { status: 400 });
   }
 
+  // Validate source if provided
+  const validSources = ['synthetic', 'peer-reviewed', 'industry-standard', 'community'];
+  if (body.source && !validSources.includes(body.source)) {
+    return NextResponse.json({ error: `source must be one of: ${validSources.join(', ')}` }, { status: 400 });
+  }
+
   let supabase: ReturnType<typeof createServiceRoleClient>;
   try {
     supabase = createServiceRoleClient();
@@ -111,6 +120,9 @@ export async function POST(req: NextRequest) {
         test_suite_url: body.testSuiteUrl,
         test_count: body.testCount,
         skill: body.skill,
+        source: body.source ?? 'community',
+        source_description: body.sourceDescription ?? null,
+        source_url: body.sourceUrl ?? null,
       },
       { onConflict: 'benchmark_id', ignoreDuplicates: false }
     )
