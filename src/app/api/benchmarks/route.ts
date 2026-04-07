@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { sanitizeSearchQuery } from '@/lib/search-sanitize';
+import { generatePublisherKey, hashKey } from '@/lib/publisher-keys';
+
+function isAdminToken(req: NextRequest): boolean {
+  const secret = process.env.PACTSPEC_PUBLISH_SECRET;
+  if (!secret) return false;
+  const token = req.headers.get('x-publish-token');
+  if (!token || token.length !== secret.length) return false;
+  return timingSafeEqual(Buffer.from(token), Buffer.from(secret));
+}
 
 // GET /api/benchmarks?domain=medical-coding
 export async function GET(req: NextRequest) {
@@ -40,14 +50,6 @@ export async function GET(req: NextRequest) {
 
 // POST /api/benchmarks — publish a new benchmark
 export async function POST(req: NextRequest) {
-  const publisherId = req.headers.get('x-agent-id');
-  if (!publisherId) {
-    return NextResponse.json({ error: 'X-Agent-ID header required' }, { status: 400 });
-  }
-  if (publisherId.length < 2 || publisherId.length > 128) {
-    return NextResponse.json({ error: 'X-Agent-ID is invalid' }, { status: 400 });
-  }
-
   let body: {
     benchmarkId?: string;
     name?: string;
@@ -106,6 +108,66 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
+  // --- Publisher authentication ---
+  const admin = isAdminToken(req);
+  const publisherKeyHeader = req.headers.get('x-publisher-key');
+
+  // Check if benchmark already exists
+  const { data: existing } = await supabase
+    .from('benchmarks')
+    .select('publisher_id')
+    .eq('benchmark_id', body.benchmarkId)
+    .maybeSingle();
+
+  let publisherId: string | null = null;
+  let newPublisherKey: string | null = null;
+
+  if (admin) {
+    publisherId = existing?.publisher_id ?? null;
+  } else if (publisherKeyHeader) {
+    const keyHash = hashKey(publisherKeyHeader);
+    const { data: publisher } = await supabase
+      .from('publishers')
+      .select('id')
+      .eq('api_key_hash', keyHash)
+      .single();
+
+    if (!publisher) {
+      return NextResponse.json({ error: 'Invalid X-Publisher-Key' }, { status: 403 });
+    }
+
+    publisherId = publisher.id;
+
+    if (existing?.publisher_id && existing.publisher_id !== publisherId) {
+      return NextResponse.json(
+        { error: 'This benchmark is owned by another publisher.' },
+        { status: 403 }
+      );
+    }
+  } else {
+    if (existing?.publisher_id) {
+      return NextResponse.json(
+        { error: 'This benchmark is owned by a publisher. Provide X-Publisher-Key header to update it.' },
+        { status: 403 }
+      );
+    }
+
+    const { rawKey, keyHash } = generatePublisherKey();
+    const { data: newPublisher, error: pubError } = await supabase
+      .from('publishers')
+      .insert({ api_key_hash: keyHash, name: body.publisher! })
+      .select()
+      .single();
+
+    if (pubError || !newPublisher) {
+      console.error('Failed to create publisher:', pubError?.message);
+      return NextResponse.json({ error: 'Failed to create publisher' }, { status: 500 });
+    }
+
+    publisherId = newPublisher.id;
+    newPublisherKey = rawKey;
+  }
+
   const { data, error } = await supabase
     .from('benchmarks')
     .upsert(
@@ -123,6 +185,7 @@ export async function POST(req: NextRequest) {
         source: body.source ?? 'community',
         source_description: body.sourceDescription ?? null,
         source_url: body.sourceUrl ?? null,
+        publisher_id: publisherId,
       },
       { onConflict: 'benchmark_id', ignoreDuplicates: false }
     )
@@ -134,5 +197,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to save benchmark' }, { status: 500 });
   }
 
-  return NextResponse.json({ benchmark: data }, { status: 201 });
+  const response: Record<string, unknown> = { benchmark: data };
+  if (newPublisherKey) {
+    response.publisherKey = newPublisherKey;
+    response.message = 'Save this key — it is shown only once. You need it to update this benchmark.';
+  }
+
+  return NextResponse.json(response, { status: 201 });
 }
